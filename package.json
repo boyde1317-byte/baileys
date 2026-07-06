@@ -1,12 +1,22 @@
 {
   "name": "@workspace/baileys",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "private": true,
   "type": "module",
   "description": "Personal Baileys fork — clean TypeScript base with extended message types",
   "exports": {
-    ".": "./src/index.ts",
+    ".": "./dist/index.js",
     "./WAProto": "./WAProto/index.js"
+  },
+  "files": [
+    "dist",
+    "WAProto",
+    "src"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "prepare": "tsup",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@cacheable/node-cache": "^1.4.0",
@@ -26,7 +36,9 @@
   },
   "devDependencies": {
     "@types/node": "^20.9.0",
-    "@types/ws": "^8.0.0"
+    "@types/ws": "^8.0.0",
+    "tsup": "^8.0.0",
+    "typescript": "~5.8.2"
   },
   "peerDependencies": {
     "jimp": "^1.6.1",
@@ -35,9 +47,6 @@
   "peerDependenciesMeta": {
     "jimp": { "optional": true },
     "link-preview-js": { "optional": true }
-  },
-  "scripts": {
-    "typecheck": "tsc --noEmit"
   },
   "engines": {
     "node": ">=20.0.0"
