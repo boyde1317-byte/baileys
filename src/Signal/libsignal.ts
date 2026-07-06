@@ -1,7 +1,7 @@
 // @ts-ignore
 import * as libsignal from 'libsignal'
 // @ts-ignore
-import { PreKeyWhisperMessage } from 'libsignal/src/protobufs'
+import { PreKeyWhisperMessage } from 'libsignal/src/protobufs.js'
 import { LRUCache } from 'lru-cache'
 import type { LIDMapping, SignalAuthState, SignalKeyStoreWithTransaction } from '../Types'
 import type { SignalRepositoryWithLIDStore } from '../Types/Signal'
