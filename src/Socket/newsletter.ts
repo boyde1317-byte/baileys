@@ -236,7 +236,10 @@ export const makeNewsletterSocket = (config: SocketConfig) => {
 			// WA invite URLs: https://whatsapp.com/channel/<key>[/<slug>]
 			// Key is always the segment immediately after "channel"
 			const channelIdx = parts.lastIndexOf('channel')
-			const key = channelIdx >= 0 ? (parts[channelIdx + 1] ?? '') : (parts.at(-1) ?? '')
+			if (channelIdx < 0 || !parts[channelIdx + 1]) {
+				return null
+			}
+			const key = parts[channelIdx + 1]
 			const result = await executeWMexQuery<unknown>(
 				{
 					fetch_creation_time: true,
