@@ -146,33 +146,32 @@ export const makeExtendedMessageHandlers = (ctx: ExtendedHandlerContext) => {
   ): Promise<proto.IWebMessageInfo> => {
     const d = content.eventMessage
 
+    // Sent flat — matches upstream's native `{ event: ... }` path
+    // (src/Utils/messages.ts), which never wraps eventMessage in
+    // viewOnceMessage. viewOnceMessage carries real self-destruct-after-
+    // one-view semantics that most clients don't apply to eventMessage,
+    // so wrapping it here caused the message to be silently dropped.
     const msg = await generateWAMessageFromContent(
       jid,
       {
-        viewOnceMessage: {
-          message: {
-            messageContextInfo: {
-              deviceListMetadata: {},
-              deviceListMetadataVersion: 2,
-              messageSecret: randomBytes(32),
-            },
-            eventMessage: {
-              isCanceled: d.isCanceled ?? false,
-              name: d.name,
-              description: d.description,
-              location: d.location ?? { degreesLatitude: 0, degreesLongitude: 0, name: 'Location' },
-              joinLink: d.joinLink ?? '',
-              startTime:
-                typeof d.startTime === 'string' ? parseInt(d.startTime, 10) : d.startTime,
-              endTime:
-                d.endTime != null
-                  ? typeof d.endTime === 'string'
-                    ? parseInt(d.endTime, 10)
-                    : d.endTime
-                  : undefined,
-              extraGuestsAllowed: d.extraGuestsAllowed !== false,
-            },
-          },
+        messageContextInfo: {
+          messageSecret: randomBytes(32),
+        },
+        eventMessage: {
+          isCanceled: d.isCanceled ?? false,
+          name: d.name,
+          description: d.description,
+          location: d.location ?? { degreesLatitude: 0, degreesLongitude: 0, name: 'Location' },
+          joinLink: d.joinLink ?? '',
+          startTime:
+            typeof d.startTime === 'string' ? parseInt(d.startTime, 10) : d.startTime,
+          endTime:
+            d.endTime != null
+              ? typeof d.endTime === 'string'
+                ? parseInt(d.endTime, 10)
+                : d.endTime
+              : undefined,
+          extraGuestsAllowed: d.extraGuestsAllowed !== false,
         },
       },
       { userJid: jidOrFallback, quoted: options.quoted },
