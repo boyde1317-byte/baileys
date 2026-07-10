@@ -45,7 +45,7 @@ export const detectExtendedMessageType = (content: object): ExtendedMessageType 
   return null
 }
 
-// ─── Handler factory ──────────────────────────────────────────────────────────
+// ─── Handler factory ─────────────────────────────────────────────────────────[...]
 
 type RelayFn = (
   jid: string,
@@ -67,7 +67,7 @@ export const makeExtendedMessageHandlers = (ctx: ExtendedHandlerContext) => {
   const { waUploadToServer, relayMessage, meJid } = ctx
   const jidOrFallback = meJid ?? '0@s.whatsapp.net'
 
-  // ── Album ─────────────────────────────────────────────────────────────────
+  // ── Album ──────────────────────────────────────────────────────────────[...]
   /**
    * Send multiple images/videos as a single WhatsApp album thread.
    *
@@ -125,7 +125,7 @@ export const makeExtendedMessageHandlers = (ctx: ExtendedHandlerContext) => {
     return albumMsg
   }
 
-  // ── Event ─────────────────────────────────────────────────────────────────
+  // ── Event ──────────────────────────────────────────────────────────────[...]
   /**
    * Send a WhatsApp event invitation card.
    * (Distinct from the upstream `{ event: ... }` content type.)
@@ -181,7 +181,7 @@ export const makeExtendedMessageHandlers = (ctx: ExtendedHandlerContext) => {
     return msg
   }
 
-  // ── Poll result ───────────────────────────────────────────────────────────
+  // ── Poll result ────────────────────────────────────────────────────────────[...]
   /**
    * Display poll results with vote counts.
    *
@@ -284,6 +284,7 @@ export const makeExtendedMessageHandlers = (ctx: ExtendedHandlerContext) => {
   const handleGroupStatus = async (
     content: GroupStatusMessageContent,
     jid: string,
+    options: Pick<MiscMessageGenerationOptions, 'quoted'> = {},
   ): Promise<proto.IWebMessageInfo> => {
     const { message: rawMessage, ...rest } = content.groupStatusMessage
 
@@ -295,6 +296,7 @@ export const makeExtendedMessageHandlers = (ctx: ExtendedHandlerContext) => {
       const simpleMsg = await generateWAMessage(jid, rest as any, {
         userJid: jidOrFallback,
         upload: waUploadToServer,
+        quoted: options.quoted,
       })
       innerMessage = simpleMsg.message!
     }
