@@ -43,13 +43,19 @@ Check if a phone number is on WhatsApp and whether it has been banned.
 const result = await sock.checkWhatsApp('6281234567890')
 // {
 //   number: '+6281234567890',
-//   onWhatsApp: true,
 //   isBanned: false,
-//   isNeedOfficialWa: false
+//   isNeedOfficialWa: false,
+//   data: undefined
 // }
+// NOTE: This is a ban-detection probe — it does NOT confirm whether the number
+// is registered on WhatsApp. It opens a pairing-code probe and reads ban error
+// shapes from the server response. There is no `onWhatsApp` field.
 
 // Banned number example:
-// { isBanned: true, data: { appeal_token: '...', violation_type: '...' } }
+// { isBanned: true, isNeedOfficialWa: false, number: '+628...', data: { appeal_token: '...', violation_type: '...' } }
+
+// Number blocked from unofficial clients:
+// { isBanned: false, isNeedOfficialWa: true, number: '+628...', data: undefined }
 ```
 
 ---
