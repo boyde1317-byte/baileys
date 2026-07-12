@@ -63,6 +63,7 @@ import {
 } from '../WABinary'
 import { USyncQuery, USyncUser } from '../WAUSync'
 import { makeSocket } from './socket.js'
+import { checkWhatsApp as checkWhatsAppUtil } from '../Utils/check-whatsapp.js'
 
 export const buildProfilePictureQueryContent = (
 	type: 'preview' | 'image',
@@ -1528,6 +1529,9 @@ export const makeChatsSocket = (config: SocketConfig) => {
 		removeMessageLabel,
 		star,
 		addOrEditQuickReply,
-		removeQuickReply
+		removeQuickReply,
+		// Ban / registration probe — wraps the standalone utility with this socket's auth state
+		checkWhatsApp: (phoneNumber: string, socketConfig?: Partial<SocketConfig>) =>
+			checkWhatsAppUtil(phoneNumber, authState, socketConfig)
 	}
 }
