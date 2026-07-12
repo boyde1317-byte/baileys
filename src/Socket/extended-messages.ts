@@ -16,13 +16,20 @@ import type {
   AlbumMessageContent,
   EventV2MessageContent,
   GroupStatusMessageContent,
+  InteractiveMessageContent,
   PollResultMessageContent,
+  ProductMessageContent,
   RequestPaymentMessageContent,
   MessageRelayOptions,
   MiscMessageGenerationOptions,
 } from '../Types/index.js'
 import type { WAMediaUploadFunction } from '../Types/Message.js'
-import { generateWAMessage, generateWAMessageFromContent, generateWAMessageContent } from '../Utils/messages.js'
+import {
+  generateWAMessage,
+  generateWAMessageFromContent,
+  generateWAMessageContent,
+  prepareWAMessageMedia,
+} from '../Utils/messages.js'
 import { generateMessageIDV2 } from '../Utils/generics.js'
 
 // ─── Extended type detection ──────────────────────────────────────────────────
@@ -33,6 +40,8 @@ export type ExtendedMessageType =
   | 'POLL_RESULT'
   | 'PAYMENT'
   | 'GROUP_STATUS'
+  | 'INTERACTIVE'
+  | 'PRODUCT'
 
 /**
  * Returns the extended message type key if the content is a custom type,
@@ -44,6 +53,8 @@ export const detectExtendedMessageType = (content: object): ExtendedMessageType 
   if ('pollResultMessage' in content) return 'POLL_RESULT'
   if ('requestPaymentMessage' in content) return 'PAYMENT'
   if ('groupStatusMessage' in content) return 'GROUP_STATUS'
+  if ('interactiveMessage' in content) return 'INTERACTIVE'
+  if ('productMessage' in content) return 'PRODUCT'
   return null
 }
 
@@ -156,7 +167,6 @@ export const makeExtendedMessageHandlers = (ctx: ExtendedHandlerContext) => {
 
       await relayMessage(jid, mediaMsg.message!, {
         messageId: mediaMsg.key.id!,
-        // FIX: Pass the album container as quoted so WA links each item to the parent
         ...(albumMsg.key
           ? {
               additionalAttributes: {
@@ -371,15 +381,10 @@ export const makeExtendedMessageHandlers = (ctx: ExtendedHandlerContext) => {
     let innerMessage: proto.IMessage
 
     if (storyData.message) {
-      // Caller provided a raw proto message — use it directly
       innerMessage = storyData.message
     } else {
-      // FIX: Use generateWAMessageContent (returns proto.IMessage) instead of
-      // generateWAMessage (returns IWebMessageInfo). Using generateWAMessage and
-      // then reading .message! was producing a double-wrapped shape that caused
-      // groupStatusMessageV2 to not render on some WA versions.
       const { message: rawMessage, ...mediaOrText } = storyData
-      void rawMessage // already handled above
+      void rawMessage
       innerMessage = await generateWAMessageContent(mediaOrText as any, {
         upload: waUploadToServer,
       })
@@ -399,5 +404,282 @@ export const makeExtendedMessageHandlers = (ctx: ExtendedHandlerContext) => {
     }
   }
 
-  return { handleAlbum, handleEvent, handlePollResult, handlePayment, handleGroupStatus }
+  // ── Interactive (nativeFlow / buttons) ────────────────────────────────────
+  /**
+   * Send an interactive message with nativeFlow buttons and an optional
+   * media header (image, video, or document).
+   *
+   * @example
+   * // Simple quick-reply buttons
+   * await sock.sendMessage(jid, {
+   *   interactiveMessage: {
+   *     title: 'Pick one',
+   *     footer: 'Powered by NEXORA',
+   *     buttons: [
+   *       { name: 'quick_reply', buttonParamsJson: JSON.stringify({ display_text: 'Yes', id: 'yes' }) },
+   *       { name: 'quick_reply', buttonParamsJson: JSON.stringify({ display_text: 'No',  id: 'no'  }) },
+   *     ],
+   *   }
+   * })
+   *
+   * // With image header
+   * await sock.sendMessage(jid, {
+   *   interactiveMessage: {
+   *     title: 'Check this out',
+   *     image: { url: 'https://...' },
+   *     buttons: [
+   *       { name: 'cta_url', buttonParamsJson: JSON.stringify({ display_text: 'Visit', url: 'https://...' }) },
+   *     ],
+   *   }
+   * })
+   */
+  const handleInteractive = async (
+    content: InteractiveMessageContent,
+    jid: string,
+    options: Pick<MiscMessageGenerationOptions, 'quoted'> = {},
+  ): Promise<proto.IWebMessageInfo> => {
+    const {
+      title,
+      body,
+      footer,
+      thumbnail,
+      image,
+      video,
+      document,
+      mimetype,
+      fileName,
+      jpegThumbnail,
+      contextInfo,
+      externalAdReply,
+      buttons = [],
+      nativeFlowMessage,
+      header,
+    } = content.interactiveMessage
+
+    // ── Upload media header if provided ──────────────────────────────────────
+    let mediaContent: Record<string, any> | null = null
+    let mediaType: string | null = null
+
+    if (thumbnail) {
+      mediaContent = await prepareWAMessageMedia(
+        { image: { url: thumbnail } } as any,
+        { upload: waUploadToServer },
+      )
+      mediaType = 'image'
+    } else if (image) {
+      mediaContent = await prepareWAMessageMedia(
+        { image: typeof image === 'object' && 'url' in image ? { url: (image as any).url } : image } as any,
+        { upload: waUploadToServer },
+      )
+      mediaType = 'image'
+    } else if (video) {
+      mediaContent = await prepareWAMessageMedia(
+        { video: typeof video === 'object' && 'url' in video ? { url: (video as any).url } : video } as any,
+        { upload: waUploadToServer },
+      )
+      mediaType = 'video'
+    } else if (document) {
+      const docPayload: any = { document }
+      if (jpegThumbnail) {
+        docPayload.jpegThumbnail =
+          typeof jpegThumbnail === 'object' && 'url' in (jpegThumbnail as any)
+            ? { url: (jpegThumbnail as any).url }
+            : jpegThumbnail
+      }
+      mediaContent = await prepareWAMessageMedia(docPayload as any, { upload: waUploadToServer })
+      if (fileName && mediaContent) {
+        const key = Object.keys(mediaContent)[0]
+        if (mediaContent[key]) mediaContent[key].fileName = fileName
+      }
+      if (mimetype && mediaContent) {
+        const key = Object.keys(mediaContent)[0]
+        if (mediaContent[key]) mediaContent[key].mimetype = mimetype
+      }
+      mediaType = 'document'
+    }
+
+    // ── Build interactiveMessage body ────────────────────────────────────────
+    const interactive: Record<string, any> = {
+      body: { text: body ?? title ?? '' },
+      footer: { text: footer ?? '' },
+    }
+
+    // Buttons / nativeFlow
+    if (buttons.length > 0) {
+      interactive.nativeFlowMessage = {
+        buttons,
+        ...(nativeFlowMessage ?? {}),
+      }
+    } else if (nativeFlowMessage) {
+      interactive.nativeFlowMessage = nativeFlowMessage
+    }
+
+    // Header (with or without media)
+    if (mediaContent) {
+      interactive.header = {
+        title: header ?? '',
+        hasMediaAttachment: true,
+        ...mediaContent,
+      }
+    } else {
+      interactive.header = {
+        title: header ?? '',
+        hasMediaAttachment: false,
+      }
+    }
+
+    // contextInfo + externalAdReply
+    const finalCtx: Record<string, any> = {}
+    if (contextInfo) {
+      Object.assign(finalCtx, {
+        mentionedJid: contextInfo.mentionedJid ?? [],
+        ...contextInfo,
+      })
+    }
+    if (externalAdReply) {
+      finalCtx.externalAdReply = {
+        title: '',
+        body: '',
+        mediaType: 1,
+        thumbnailUrl: '',
+        mediaUrl: '',
+        sourceUrl: '',
+        showAdAttribution: false,
+        renderLargerThumbnail: false,
+        ...externalAdReply,
+      }
+    }
+    if (Object.keys(finalCtx).length > 0) {
+      interactive.contextInfo = finalCtx
+    }
+
+    const msg = await generateWAMessageFromContent(
+      jid,
+      { interactiveMessage: interactive },
+      { userJid: jidOrFallback, quoted: options.quoted },
+    )
+
+    await relayMessage(jid, msg.message!, { messageId: msg.key.id! })
+    return msg
+  }
+
+  // ── Product card ──────────────────────────────────────────────────────────
+  /**
+   * Send a product interactive card wrapped in viewOnceMessage.
+   *
+   * @example
+   * await sock.sendMessage(jid, {
+   *   productMessage: {
+   *     title: 'Sneakers X1',
+   *     description: 'Limited edition',
+   *     thumbnail: buffer,   // or { url: '...' }
+   *     productId: 'sku-001',
+   *     priceAmount1000: 250000,
+   *     currencyCode: 'IDR',
+   *     buttons: [
+   *       { name: 'cta_url', buttonParamsJson: JSON.stringify({ display_text: 'Buy now', url: 'https://...' }) },
+   *     ],
+   *   }
+   * })
+   */
+  const handleProduct = async (
+    content: ProductMessageContent,
+    jid: string,
+    options: Pick<MiscMessageGenerationOptions, 'quoted'> = {},
+  ): Promise<proto.IWebMessageInfo> => {
+    const {
+      title = '',
+      description = '',
+      thumbnail,
+      productId = '',
+      retailerId = '',
+      url = '',
+      body = '',
+      footer = '',
+      buttons = [],
+      priceAmount1000 = null,
+      currencyCode = 'IDR',
+    } = content.productMessage
+
+    // Upload thumbnail if provided
+    let productImage: proto.Message.IImageMessage | undefined
+    if (thumbnail) {
+      const uploaded = await prepareWAMessageMedia(
+        {
+          image:
+            typeof thumbnail === 'object' && 'url' in (thumbnail as any)
+              ? { url: (thumbnail as any).url }
+              : thumbnail,
+        } as any,
+        { upload: waUploadToServer },
+      )
+      productImage = (uploaded as any)?.imageMessage ?? undefined
+    }
+
+    const productPayload: proto.IMessage = {
+      viewOnceMessage: {
+        message: {
+          interactiveMessage: {
+            body: { text: body },
+            footer: { text: footer },
+            header: {
+              title,
+              hasMediaAttachment: !!productImage,
+              ...(productImage ? { imageMessage: productImage } : {}),
+            } as any,
+            nativeFlowMessage: { buttons } as any,
+            // Product info lives in the header's productMessage on older WA versions
+            contextInfo: {
+              externalAdReply: {
+                title,
+                body: description,
+                mediaType: 1,
+                renderLargerThumbnail: true,
+                showAdAttribution: false,
+              },
+            } as any,
+          } as any,
+        },
+      },
+    }
+
+    // Attach product metadata directly for newer WA clients
+    ;(productPayload.viewOnceMessage!.message!.interactiveMessage! as any).header = {
+      title,
+      hasMediaAttachment: !!productImage,
+      ...(productImage ? { imageMessage: productImage } : {}),
+      productMessage: {
+        product: {
+          productImage,
+          productId,
+          title,
+          description,
+          currencyCode,
+          priceAmount1000,
+          retailerId,
+          url,
+          productImageCount: productImage ? 1 : 0,
+        },
+        businessOwnerJid: jidOrFallback,
+      },
+    }
+
+    const msg = await generateWAMessageFromContent(jid, productPayload, {
+      userJid: jidOrFallback,
+      quoted: options.quoted,
+    })
+
+    await relayMessage(jid, msg.message!, { messageId: msg.key.id! })
+    return msg
+  }
+
+  return {
+    handleAlbum,
+    handleEvent,
+    handlePollResult,
+    handlePayment,
+    handleGroupStatus,
+    handleInteractive,
+    handleProduct,
+  }
 }
