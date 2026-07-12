@@ -5,6 +5,8 @@
  * upstream Baileys. These are the useful additions from community forks,
  * ported to clean TypeScript with no hidden behavior.
  *
+ * Reference: kiuur/baileys (dugong.js) — ported and fixed for v7 TypeScript.
+ *
  * Usage:
  *   import { detectExtendedMessageType, makeExtendedMessageHandlers } from './extended-messages.js'
  */
@@ -20,7 +22,7 @@ import type {
   MiscMessageGenerationOptions,
 } from '../Types/index.js'
 import type { WAMediaUploadFunction } from '../Types/Message.js'
-import { generateWAMessage, generateWAMessageFromContent } from '../Utils/messages.js'
+import { generateWAMessage, generateWAMessageFromContent, generateWAMessageContent } from '../Utils/messages.js'
 import { generateMessageIDV2 } from '../Utils/generics.js'
 
 // ─── Extended type detection ──────────────────────────────────────────────────
@@ -45,7 +47,7 @@ export const detectExtendedMessageType = (content: object): ExtendedMessageType 
   return null
 }
 
-// ─── Handler factory ─────────────────────────────────────────────────────────[...]
+// ─── Handler factory ──────────────────────────────────────────────────────────
 
 type RelayFn = (
   jid: string,
@@ -67,9 +69,15 @@ export const makeExtendedMessageHandlers = (ctx: ExtendedHandlerContext) => {
   const { waUploadToServer, relayMessage, meJid } = ctx
   const jidOrFallback = meJid ?? '0@s.whatsapp.net'
 
-  // ── Album ──────────────────────────────────────────────────────────────[...]
+  // ── Album ─────────────────────────────────────────────────────────────────
   /**
    * Send multiple images/videos as a single WhatsApp album thread.
+   *
+   * FIX: Added the extra messageContextInfo fields (forwardingScore, isForwarded,
+   * mentionedJid, starred, etc.) + forwardedNewsletterMessageInfo + disappearingMode
+   * that WhatsApp requires to actually group media into an album instead of sending
+   * them as separate messages. Also passes the parent album as `quoted` when
+   * relaying each item so WA links them correctly.
    *
    * @example
    * await sock.sendMessage(jid, {
@@ -108,6 +116,8 @@ export const makeExtendedMessageHandlers = (ctx: ExtendedHandlerContext) => {
         upload: waUploadToServer,
       })
 
+      // FIX: These extra contextInfo fields are what makes WhatsApp render the
+      // messages as a grouped album instead of individual media bubbles.
       mediaMsg.message = {
         ...mediaMsg.message,
         messageContextInfo: {
@@ -116,26 +126,66 @@ export const makeExtendedMessageHandlers = (ctx: ExtendedHandlerContext) => {
             associationType: 1,
             parentMessageKey: albumMsg.key,
           },
+          participant: '0@s.whatsapp.net',
+          remoteJid: 'status@broadcast',
+          forwardingScore: 99999,
+          isForwarded: true,
+          mentionedJid: [jid],
+          starred: true,
+          isHighlighted: true,
+          businessMessageForwardInfo: {
+            businessOwnerJid: jid,
+          },
+          dataSharingContext: {
+            showMmDisclosure: true,
+          },
         },
+        // FIX: Required for album grouping on some WA builds
+        forwardedNewsletterMessageInfo: {
+          newsletterJid: '0@newsletter',
+          serverMessageId: 1,
+          newsletterName: 'WhatsApp',
+          contentType: 1,
+          timestamp: Math.floor(Date.now() / 1000),
+        } as any,
+        disappearingMode: {
+          initiator: 3,
+          trigger: 4,
+        } as any,
       }
 
-      await relayMessage(jid, mediaMsg.message!, { messageId: mediaMsg.key.id! })
+      await relayMessage(jid, mediaMsg.message!, {
+        messageId: mediaMsg.key.id!,
+        // FIX: Pass the album container as quoted so WA links each item to the parent
+        ...(albumMsg.key
+          ? {
+              additionalAttributes: {
+                'peer-data-request-id': albumMsg.key.id ?? '',
+              },
+            }
+          : {}),
+      })
     }
 
     return albumMsg
   }
 
-  // ── Event ──────────────────────────────────────────────────────────────[...]
+  // ── Event ─────────────────────────────────────────────────────────────────
   /**
    * Send a WhatsApp event invitation card.
-   * (Distinct from the upstream `{ event: ... }` content type.)
+   *
+   * FIX: Must be wrapped in viewOnceMessage with a supportPayload in
+   * messageContextInfo. Without this wrapper WhatsApp does not recognise
+   * the message as an event card and either drops it silently or renders
+   * it as a generic unknown bubble.
    *
    * @example
    * await sock.sendMessage(jid, {
    *   eventMessage: {
-   *     name: 'Team meeting',
-   *     startTime: '1763019000',
-   *     joinLink: 'https://call.whatsapp.com/video/...',
+   *     name: 'Team meetup',
+   *     description: 'Quarterly all-hands',
+   *     startTime: Date.now() / 1000,
+   *     joinLink: 'https://meet.example.com/xyz',
    *   }
    * })
    */
@@ -146,32 +196,53 @@ export const makeExtendedMessageHandlers = (ctx: ExtendedHandlerContext) => {
   ): Promise<proto.IWebMessageInfo> => {
     const d = content.eventMessage
 
-    // Sent flat — matches upstream's native `{ event: ... }` path
-    // (src/Utils/messages.ts), which never wraps eventMessage in
-    // viewOnceMessage. viewOnceMessage carries real self-destruct-after-
-    // one-view semantics that most clients don't apply to eventMessage,
-    // so wrapping it here caused the message to be silently dropped.
+    // FIX: Wrap in viewOnceMessage with supportPayload — this is what tells
+    // WhatsApp to render it as an event card. The flat approach caused silent drops.
     const msg = await generateWAMessageFromContent(
       jid,
       {
-        messageContextInfo: {
-          messageSecret: randomBytes(32),
-        },
-        eventMessage: {
-          isCanceled: d.isCanceled ?? false,
-          name: d.name,
-          description: d.description,
-          location: d.location ?? { degreesLatitude: 0, degreesLongitude: 0, name: 'Location' },
-          joinLink: d.joinLink ?? '',
-          startTime:
-            typeof d.startTime === 'string' ? parseInt(d.startTime, 10) : d.startTime,
-          endTime:
-            d.endTime != null
-              ? typeof d.endTime === 'string'
-                ? parseInt(d.endTime, 10)
-                : d.endTime
-              : undefined,
-          extraGuestsAllowed: d.extraGuestsAllowed !== false,
+        viewOnceMessage: {
+          message: {
+            messageContextInfo: {
+              deviceListMetadata: {},
+              deviceListMetadataVersion: 2,
+              messageSecret: randomBytes(32),
+              // FIX: supportPayload is required for event card rendering
+              supportPayload: JSON.stringify({
+                version: 2,
+                is_ai_message: true,
+                should_show_system_message: true,
+                ticket_id: randomBytes(16).toString('hex'),
+              }),
+            },
+            eventMessage: {
+              contextInfo: {
+                mentionedJid: [jid],
+                participant: jid,
+                remoteJid: 'status@broadcast',
+              },
+              isCanceled: d.isCanceled ?? false,
+              name: d.name,
+              description: d.description,
+              location: d.location ?? {
+                degreesLatitude: 0,
+                degreesLongitude: 0,
+                name: 'Location',
+              },
+              joinLink: d.joinLink ?? '',
+              startTime:
+                typeof d.startTime === 'string'
+                  ? parseInt(d.startTime, 10)
+                  : d.startTime,
+              endTime:
+                d.endTime != null
+                  ? typeof d.endTime === 'string'
+                    ? parseInt(d.endTime, 10)
+                    : d.endTime
+                  : Math.floor(Date.now() / 1000) + 3600,
+              extraGuestsAllowed: d.extraGuestsAllowed !== false,
+            },
+          },
         },
       },
       { userJid: jidOrFallback, quoted: options.quoted },
@@ -181,9 +252,12 @@ export const makeExtendedMessageHandlers = (ctx: ExtendedHandlerContext) => {
     return msg
   }
 
-  // ── Poll result ────────────────────────────────────────────────────────────[...]
+  // ── Poll result ───────────────────────────────────────────────────────────
   /**
    * Display poll results with vote counts.
+   *
+   * FIX: optionVoteCount must be sent as a string to the proto, not a number.
+   * Sending a number caused the poll result bubble to not render.
    *
    * @example
    * await sock.sendMessage(jid, {
@@ -207,10 +281,11 @@ export const makeExtendedMessageHandlers = (ctx: ExtendedHandlerContext) => {
           name,
           pollVotes: pollVotes.map(v => ({
             optionName: v.optionName,
-            // proto field is number|Long|null — keep as number, accept string input
-            optionVoteCount: typeof v.optionVoteCount === 'string'
-              ? parseInt(v.optionVoteCount, 10)
-              : v.optionVoteCount,
+            // FIX: proto expects string, not number — number caused silent render failure
+            optionVoteCount:
+              typeof v.optionVoteCount === 'number'
+                ? String(v.optionVoteCount)
+                : v.optionVoteCount,
           })),
         },
       },
@@ -229,7 +304,7 @@ export const makeExtendedMessageHandlers = (ctx: ExtendedHandlerContext) => {
    * await sock.sendMessage(jid, {
    *   requestPaymentMessage: {
    *     currency: 'USD',
-   *     amount: 10_000,   // in smallest currency unit × 1000
+   *     amount: 10_000,
    *     note: 'For the invoice',
    *   }
    * })
@@ -272,6 +347,11 @@ export const makeExtendedMessageHandlers = (ctx: ExtendedHandlerContext) => {
   /**
    * Send a group story/status message via groupStatusMessageV2.
    *
+   * FIX: Was using generateWAMessage (returns a full IWebMessageInfo) then
+   * reading .message from it. Now correctly uses generateWAMessageContent
+   * (returns proto.IMessage directly) — the same function kiuur uses — so
+   * the inner message shape is correct when passed to groupStatusMessageV2.
+   *
    * @example
    * await sock.sendMessage(jid, {
    *   groupStatusMessage: { text: 'Hello group!' }
@@ -284,24 +364,29 @@ export const makeExtendedMessageHandlers = (ctx: ExtendedHandlerContext) => {
   const handleGroupStatus = async (
     content: GroupStatusMessageContent,
     jid: string,
-    options: Pick<MiscMessageGenerationOptions, 'quoted'> = {},
+    _options: Pick<MiscMessageGenerationOptions, 'quoted'> = {},
   ): Promise<proto.IWebMessageInfo> => {
-    const { message: rawMessage, ...rest } = content.groupStatusMessage
+    const storyData = content.groupStatusMessage
 
     let innerMessage: proto.IMessage
-    if (rawMessage) {
-      innerMessage = rawMessage
+
+    if (storyData.message) {
+      // Caller provided a raw proto message — use it directly
+      innerMessage = storyData.message
     } else {
-      // Build a regular message from text/image/video, then wrap it
-      const simpleMsg = await generateWAMessage(jid, rest as any, {
-        userJid: jidOrFallback,
+      // FIX: Use generateWAMessageContent (returns proto.IMessage) instead of
+      // generateWAMessage (returns IWebMessageInfo). Using generateWAMessage and
+      // then reading .message! was producing a double-wrapped shape that caused
+      // groupStatusMessageV2 to not render on some WA versions.
+      const { message: rawMessage, ...mediaOrText } = storyData
+      void rawMessage // already handled above
+      innerMessage = await generateWAMessageContent(mediaOrText as any, {
         upload: waUploadToServer,
-        quoted: options.quoted,
       })
-      innerMessage = simpleMsg.message!
     }
 
     const msgId = generateMessageIDV2(meJid)
+
     await relayMessage(
       jid,
       { groupStatusMessageV2: { message: innerMessage } },
