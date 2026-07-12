@@ -6,7 +6,9 @@ import type {
   EventV2MessageContent,
   ExtendedAnyMessageContent,
   GroupStatusMessageContent,
+  InteractiveMessageContent,
   PollResultMessageContent,
+  ProductMessageContent,
   RequestPaymentMessageContent,
 } from '../Types/index.js'
 import { detectExtendedMessageType, makeExtendedMessageHandlers } from './extended-messages.js'
