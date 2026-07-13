@@ -488,6 +488,7 @@ export const makeExtendedMessageHandlers = (ctx: ExtendedHandlerContext) => {
       externalAdReply,
       buttons = [],
       nativeFlowMessage,
+      carouselMessage,
       header,
     } = content.interactiveMessage
 
@@ -547,6 +548,13 @@ export const makeExtendedMessageHandlers = (ctx: ExtendedHandlerContext) => {
       }
     } else if (nativeFlowMessage) {
       interactive.nativeFlowMessage = nativeFlowMessage
+    }
+
+    // carouselMessage — pass through pre-built cards (each card is an InteractiveMessage).
+    // sendCarousel in the bridge pre-uploads card images before reaching here, so
+    // we do not attempt another upload — just attach the structure as-is.
+    if (carouselMessage) {
+      interactive.carouselMessage = carouselMessage
     }
 
     // Header (with or without media)
