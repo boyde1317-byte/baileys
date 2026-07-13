@@ -340,7 +340,7 @@ export const makeExtendedMessageHandlers = (ctx: ExtendedHandlerContext) => {
         currencyCodeIso4217: d.currency ?? 'IDR',
         requestFrom: d.from ?? '0@s.whatsapp.net',
         noteMessage,
-        background: d.background ?? { id: 'DEFAULT', placeholderArgb: 0xfff0f0f0 },
+        ...(d.background ? { background: d.background } : {}),
       },
     }
 
