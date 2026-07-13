@@ -333,6 +333,41 @@ export const makeExtendedMessageHandlers = (ctx: ExtendedHandlerContext) => {
       noteMessage = { extendedTextMessage: { text: d.note } }
     }
 
+    // Build PaymentBackground — upload image to WA media servers if provided
+    let background: proto.IPaymentBackground | undefined
+    if (d.background?.image) {
+      const prepared = await prepareWAMessageMedia(
+        { image: d.background.image },
+        { upload: waUploadToServer },
+      )
+      const img = prepared.imageMessage!
+      background = {
+        id: d.background.id ?? randomBytes(8).toString('hex'),
+        fileLength: img.fileLength ?? undefined,
+        width: img.width ?? undefined,
+        height: img.height ?? undefined,
+        mimetype: img.mimetype ?? 'image/jpeg',
+        placeholderArgb: d.background.placeholderArgb ?? undefined,
+        textArgb: d.background.textArgb ?? undefined,
+        subtextArgb: d.background.subtextArgb ?? undefined,
+        type: 1, // PaymentBackground.Type.DEFAULT
+        mediaData: {
+          mediaKey: img.mediaKey ?? undefined,
+          mediaKeyTimestamp: img.mediaKeyTimestamp ?? undefined,
+          fileSha256: img.fileSha256 ?? undefined,
+          fileEncSha256: img.fileEncSha256 ?? undefined,
+          directPath: img.directPath ?? undefined,
+        },
+      }
+    } else if (d.background) {
+      background = {
+        id: d.background.id,
+        placeholderArgb: d.background.placeholderArgb,
+        textArgb: d.background.textArgb,
+        subtextArgb: d.background.subtextArgb,
+      }
+    }
+
     const payloadMessage: proto.IMessage = {
       requestPaymentMessage: {
         expiryTimestamp: d.expiry ?? 0,
@@ -340,7 +375,7 @@ export const makeExtendedMessageHandlers = (ctx: ExtendedHandlerContext) => {
         currencyCodeIso4217: d.currency ?? 'IDR',
         requestFrom: d.from ?? '0@s.whatsapp.net',
         noteMessage,
-        ...(d.background ? { background: d.background } : {}),
+        ...(background ? { background } : {}),
       },
     }
 
