@@ -289,6 +289,8 @@ export interface RequestPaymentMessageContent {
 			placeholderArgb?: number
 			textArgb?: number
 			subtextArgb?: number
+			/** Raw image buffer or URL — the handler uploads it and populates mediaData */
+			image?: WAMediaUpload
 		}
 		expiry?: number
 	}
