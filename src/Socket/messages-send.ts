@@ -1217,6 +1217,8 @@ export const makeMessagesSocket = (config: SocketConfig) => {
 			return 'order'
 		} else if (message.productMessage) {
 			return 'product'
+		} else if (message.requestPaymentMessage) {
+			return 'payment'
 		} else if (message.interactiveResponseMessage) {
 			return 'native_flow_response'
 		} else if (message.groupInviteMessage) {

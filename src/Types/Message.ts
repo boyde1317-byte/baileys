@@ -305,6 +305,44 @@ export interface GroupStatusMessageContent {
 	}
 }
 
+/** Send an interactive message with nativeFlow buttons and an optional media header */
+export interface InteractiveMessageContent {
+	interactiveMessage: {
+		title?: string
+		body?: string
+		footer?: string
+		thumbnail?: WAMediaUpload
+		image?: WAMediaUpload
+		video?: WAMediaUpload
+		document?: WAMediaUpload
+		mimetype?: string
+		fileName?: string
+		jpegThumbnail?: WAMediaUpload
+		contextInfo?: proto.IContextInfo
+		externalAdReply?: proto.ContextInfo.IExternalAdReplyInfo
+		buttons?: Array<{ name: string; buttonParamsJson: string }>
+		nativeFlowMessage?: Record<string, any>
+		header?: string
+	}
+}
+
+/** Send a product interactive card wrapped in viewOnceMessage */
+export interface ProductMessageContent {
+	productMessage: {
+		title?: string
+		description?: string
+		thumbnail?: WAMediaUpload
+		productId?: string
+		retailerId?: string
+		url?: string
+		body?: string
+		footer?: string
+		buttons?: Array<{ name: string; buttonParamsJson: string }>
+		priceAmount1000?: number | null
+		currencyCode?: string
+	}
+}
+
 /* ──────────────────────────────────────────────────────────────────────────── */
 
 export type AnyRegularMessageContent = (
@@ -394,6 +432,8 @@ export type ExtendedAnyMessageContent =
 	| PollResultMessageContent
 	| RequestPaymentMessageContent
 	| GroupStatusMessageContent
+	| InteractiveMessageContent
+	| ProductMessageContent
 	/** Mark a message as AI-generated — adds biz_bot attribute to the stanza */
 	| { ai: true; text: string }
 
