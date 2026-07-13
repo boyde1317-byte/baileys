@@ -1376,6 +1376,10 @@ export const makeMessagesSocket = (config: SocketConfig) => {
 							return extHandlers.handlePayment(content as unknown as RequestPaymentMessageContent, jid, options)
 						case 'GROUP_STATUS':
 							return extHandlers.handleGroupStatus(content as unknown as GroupStatusMessageContent, jid)
+					case 'INTERACTIVE':
+							return extHandlers.handleInteractive(content as unknown as InteractiveMessageContent, jid, options)
+					case 'PRODUCT':
+							return extHandlers.handleProduct(content as unknown as ProductMessageContent, jid, options)
 					}
 				}
 
