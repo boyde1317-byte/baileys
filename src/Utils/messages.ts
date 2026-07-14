@@ -1168,6 +1168,21 @@ export const downloadMediaMessage = async <Type extends 'buffer' | 'stream'>(
 	}
 }
 
+/**
+ * Determines whether a message should include a Biz Binary Node.
+ * A Biz Binary Node is added only for interactive messages
+ * such as buttons or other supported interactive types.
+ * Without this node, WhatsApp clients receive the message but will not
+ * render/activate the buttons, which is why taps on them do nothing.
+ */
+export const shouldIncludeBizBinaryNode = (message: proto.IMessage | null | undefined): boolean =>
+	!!(
+		message?.buttonsMessage ||
+		message?.listMessage ||
+		message?.templateMessage ||
+		(message?.interactiveMessage && (message.interactiveMessage as any).nativeFlowMessage)
+	)
+
 /** Checks whether the given message is a media message; if it is returns the inner content */
 export const assertMediaContent = (content: proto.IMessage | null | undefined) => {
 	content = extractMessageContent(content)

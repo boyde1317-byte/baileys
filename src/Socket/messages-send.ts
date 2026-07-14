@@ -44,6 +44,7 @@ import {
 	MessageRetryManager,
 	normalizeMessageContent,
 	parseAndInjectE2ESessions,
+	shouldIncludeBizBinaryNode,
 	unixTimestampSeconds
 } from '../Utils'
 import { getUrlInfo } from '../Utils/link-preview'
@@ -64,6 +65,7 @@ import {
 	type FullJid,
 	getBinaryNodeChild,
 	getBinaryNodeChildren,
+	getBizBinaryNode,
 	isHostedLidUser,
 	isHostedPnUser,
 	isJidBot,
@@ -1099,8 +1101,17 @@ export const makeMessagesSocket = (config: SocketConfig) => {
 				})
 			}
 
+			let alreadyHasBizNode = false
 			if (additionalNodes && additionalNodes.length > 0) {
 				;(stanza.content as BinaryNode[]).push(...additionalNodes)
+				alreadyHasBizNode = additionalNodes.some(node => node.tag === 'biz')
+			}
+
+			// Interactive/button/list/template messages require a `<biz>` binary node
+			// alongside the stanza, or WhatsApp clients will not activate the buttons.
+			if (!alreadyHasBizNode && shouldIncludeBizBinaryNode(message)) {
+				const bizNode = getBizBinaryNode(message)
+				;(stanza.content as BinaryNode[]).push(bizNode)
 			}
 
 			logger.debug({ msgId }, `sending message to ${participants.length} devices`)

@@ -1,8 +1,91 @@
 import { Boom } from '@hapi/boom'
+import { randomBytes } from 'crypto'
 import { proto } from '../../WAProto/index.js'
 import { type BinaryNode } from './types'
 
 // some extra useful utilities
+
+const DECISION_SOURCE_CONTENT: BinaryNode[] = [
+	{
+		tag: 'decision_source',
+		attrs: { value: 'df' }
+	}
+]
+
+const NATIVE_FLOW_ATTRIBUTE = { type: 'native_flow', v: '1' }
+
+const MIXED_NATIVE_FLOW: BinaryNode = {
+	tag: 'interactive',
+	attrs: NATIVE_FLOW_ATTRIBUTE,
+	content: [
+		{
+			tag: 'native_flow',
+			attrs: { v: '9', name: 'mixed' }
+		}
+	]
+}
+
+const LIST_TYPE_CONTENT: BinaryNode = {
+	tag: 'list',
+	attrs: { v: '2', type: 'product_list' }
+}
+
+/**
+ * Builds the `<biz>` binary node that must accompany interactive/button
+ * messages (buttons, lists, templates, native-flow interactive messages).
+ * Without this node WhatsApp clients will not activate the buttons even
+ * though the message content itself is well-formed.
+ */
+export const getBizBinaryNode = (message: proto.IMessage | null | undefined): BinaryNode => {
+	const flowMsg = (message?.interactiveMessage as any)?.nativeFlowMessage
+	const firstButtonName = flowMsg?.buttons?.[0]?.name
+
+	const qualityContent: BinaryNode = {
+		tag: 'quality_control',
+		attrs: {
+			decision_id: randomBytes(20).toString('hex'),
+			source_type: 'third_party'
+		},
+		content: DECISION_SOURCE_CONTENT
+	}
+
+	const bizAttributes: Record<string, string> = {
+		actual_actors: '2',
+		host_storage: '2',
+		privacy_mode_ts: `${Math.floor(Date.now() / 1_000)}`
+	}
+
+	if (firstButtonName === 'review_and_pay' || firstButtonName === 'payment_info') {
+		bizAttributes.native_flow_name = firstButtonName === 'review_and_pay' ? 'order_details' : firstButtonName
+		return {
+			tag: 'biz',
+			attrs: bizAttributes,
+			content: [qualityContent]
+		}
+	}
+
+	if (flowMsg || message?.buttonsMessage || message?.templateMessage) {
+		return {
+			tag: 'biz',
+			attrs: bizAttributes,
+			content: [MIXED_NATIVE_FLOW, qualityContent]
+		}
+	}
+
+	if (message?.listMessage) {
+		return {
+			tag: 'biz',
+			attrs: bizAttributes,
+			content: [LIST_TYPE_CONTENT, qualityContent]
+		}
+	}
+
+	return {
+		tag: 'biz',
+		attrs: bizAttributes,
+		content: [qualityContent]
+	}
+}
 
 const indexCache = new WeakMap<BinaryNode, Map<string, BinaryNode[]>>()
 
