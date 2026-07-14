@@ -662,6 +662,13 @@ export const makeMessagesSocket = (config: SocketConfig) => {
 		const binaryNodeContent: BinaryNode[] = []
 		const devices: DeviceWithJid[] = []
 		let reportingMessage: proto.IMessage | undefined
+		// Normalized/unwrapped content — messages can arrive wrapped in
+		// ephemeralMessage/viewOnceMessage etc, in which case the interactive/
+		// buttons/list keys live one level down. All type + biz-node detection
+		// must operate on this, not the raw top-level `message`, or wrapped
+		// interactive messages silently lose their `<biz>` node (and can be
+		// dropped outright by WhatsApp as malformed).
+		const innerMessage = normalizeMessageContent(message)
 
 		const meMsg: proto.IMessage = {
 			deviceSentMessage: {
@@ -705,7 +712,7 @@ export const makeMessagesSocket = (config: SocketConfig) => {
 					attrs: {
 						to: jid,
 						id: msgId,
-						type: getMessageType(message),
+						type: getMessageType(innerMessage!),
 						...(additionalAttributes || {})
 					},
 					content: binaryNodeContent
@@ -715,7 +722,7 @@ export const makeMessagesSocket = (config: SocketConfig) => {
 				return
 			}
 
-			if (normalizeMessageContent(message)?.pinInChatMessage || normalizeMessageContent(message)?.reactionMessage) {
+			if (innerMessage?.pinInChatMessage || innerMessage?.reactionMessage) {
 				extraAttrs['decrypt-fail'] = 'hide' // todo: expand for reactions and other types
 			}
 
@@ -1010,7 +1017,7 @@ export const makeMessagesSocket = (config: SocketConfig) => {
 				attrs: {
 					id: msgId,
 					to: destinationJid,
-					type: getMessageType(message),
+					type: getMessageType(innerMessage!),
 					...(additionalAttributes || {})
 				},
 				content: binaryNodeContent
@@ -1108,9 +1115,13 @@ export const makeMessagesSocket = (config: SocketConfig) => {
 			}
 
 			// Interactive/button/list/template messages require a `<biz>` binary node
-			// alongside the stanza, or WhatsApp clients will not activate the buttons.
-			if (!alreadyHasBizNode && shouldIncludeBizBinaryNode(message)) {
-				const bizNode = getBizBinaryNode(message)
+			// alongside the stanza, or WhatsApp clients will not activate the buttons —
+			// and will sometimes drop the whole message as malformed. Must check the
+			// normalized/unwrapped content: a message wrapped in ephemeralMessage or
+			// viewOnceMessage has its interactiveMessage/buttonsMessage/listMessage one
+			// level down, not on the raw top-level `message`.
+			if (!alreadyHasBizNode && shouldIncludeBizBinaryNode(innerMessage)) {
+				const bizNode = getBizBinaryNode(innerMessage)
 				;(stanza.content as BinaryNode[]).push(bizNode)
 			}
 
@@ -1120,7 +1131,7 @@ export const makeMessagesSocket = (config: SocketConfig) => {
 
 			// Fire-and-forget: issue our token to the contact AFTER message send.
 			// WA Web skips protocol messages and PSA/bot contacts (TcTokenChatAction: isRegularUser)
-			const isProtocolMsg = !!normalizeMessageContent(message)?.protocolMessage
+			const isProtocolMsg = !!innerMessage?.protocolMessage
 			const isBotOrPSA = destinationJid === PSA_WID || isJidBot(destinationJid) || isJidMetaAI(destinationJid)
 			if (
 				is1on1Send &&
