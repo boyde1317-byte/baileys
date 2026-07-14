@@ -392,6 +392,30 @@ function hasOptionalProperty<T, K extends PropertyKey>(obj: T, key: K): obj is W
 	return typeof obj === 'object' && obj !== null && key in obj && (obj as any)[key] !== null
 }
 
+/**
+ * Serialise a nativeFlow button array into proto-compatible shape.
+ * Accepts NEXORA-MD bridge format { name, params }, pre-serialised
+ * { name, buttonParamsJson }, and shorthand { id/url/call/copy/sections, text }.
+ */
+const prepareNativeFlowButtons = (buttons: any): { buttons: Array<{ name: string; buttonParamsJson: string }> } => {
+	const list: any[] = Array.isArray(buttons) ? buttons : (buttons?.buttons || [])
+	return {
+		buttons: list.map((btn: any) => {
+			if(btn.buttonParamsJson !== undefined)
+				return { name: btn.name || 'quick_reply', buttonParamsJson: btn.buttonParamsJson }
+			if(btn.params !== undefined)
+				return { name: btn.name || 'quick_reply', buttonParamsJson: typeof btn.params === 'string' ? btn.params : JSON.stringify(btn.params || {}) }
+			const text = btn.text || btn.buttonText || '👉 Click'
+			if(btn.id !== undefined)       return { name: 'quick_reply',   buttonParamsJson: JSON.stringify({ display_text: text, id: btn.id }) }
+			if(btn.url !== undefined)      return { name: 'cta_url',       buttonParamsJson: JSON.stringify({ display_text: text, url: btn.url, merchant_url: btn.url }) }
+			if(btn.call !== undefined)     return { name: 'cta_call',      buttonParamsJson: JSON.stringify({ display_text: text, phone_number: btn.call }) }
+			if(btn.copy !== undefined)     return { name: 'cta_copy',      buttonParamsJson: JSON.stringify({ display_text: text, copy_code: btn.copy }) }
+			if(btn.sections !== undefined) return { name: 'single_select', buttonParamsJson: JSON.stringify({ title: text, sections: btn.sections }) }
+			return { name: btn.name || 'quick_reply', buttonParamsJson: JSON.stringify(btn) }
+		})
+	}
+}
+
 export const generateWAMessageContent = async (
 	message: AnyMessageContent,
 	options: MessageContentGenerationOptions
@@ -607,6 +631,43 @@ export const generateWAMessageContent = async (
 				initiatedByMe: true
 			}
 		}
+	} else if(hasNonNullishProperty(message, 'nativeFlow')) {
+		// ── Native-flow interactive buttons (itsliaaa-compatible path) ──────────
+		// Routed through sock.sendMessage → generateWAMessageContent so the standard
+		// Baileys chain handles proto serialisation and messageSecret injection,
+		// avoiding raw-proto version-mismatch issues in the bridge.
+		const interactiveMessage: Record<string, unknown> = {
+			nativeFlowMessage: prepareNativeFlowButtons((message as any).nativeFlow)
+		}
+		if(hasOptionalProperty(message, 'text'))   interactiveMessage.body   = { text: (message as any).text }
+		if(hasOptionalProperty(message, 'footer')) interactiveMessage.footer = { text: (message as any).footer }
+		m = { interactiveMessage }
+		m.messageContextInfo = { messageSecret: randomBytes(32) }
+	} else if(hasNonNullishProperty(message, 'cards')) {
+		// ── Carousel interactive message ─────────────────────────────────────────
+		const cards = (message as any).cards as any[]
+		const interactiveMessage: Record<string, unknown> = {
+			carouselMessage: {
+				cards: await Promise.all(cards.map(async (card: any) => {
+					const carouselCard: Record<string, unknown> = {
+						nativeFlowMessage: prepareNativeFlowButtons(card.nativeFlow || card.buttons || [])
+					}
+					if(card.image) {
+						const { imageMessage } = await prepareWAMessageMedia({ image: card.image }, options)
+						carouselCard.header = { title: card.title || '', subtitle: card.subtitle || '', imageMessage, hasMediaAttachment: true }
+					}
+					if(card.body || card.caption) carouselCard.body   = { text: card.body || card.caption || '' }
+					if(card.footer)               carouselCard.footer = { text: card.footer }
+					return carouselCard
+				})),
+				carouselCardType: 0,
+				messageVersion:   1
+			}
+		}
+		if(hasOptionalProperty(message, 'text'))   interactiveMessage.body   = { text: (message as any).text }
+		if(hasOptionalProperty(message, 'footer')) interactiveMessage.footer = { text: (message as any).footer }
+		m = { interactiveMessage }
+		m.messageContextInfo = { messageSecret: randomBytes(32) }
 	} else {
 		m = await prepareWAMessageMedia(message, options)
 	}
