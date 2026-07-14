@@ -27,7 +27,7 @@ import type {
 	WATextMessage
 } from '../Types'
 import { WAMessageStatus, WAProto } from '../Types'
-import { isJidGroup, isJidNewsletter, isJidStatusBroadcast, jidNormalizedUser } from '../WABinary'
+import { isJidGroup, isJidNewsletter, isJidStatusBroadcast, isLidUser, isPnUser, jidNormalizedUser } from '../WABinary'
 import { sha256 } from './crypto'
 import { generateMessageIDV2, getKeyAuthor, unixTimestampSeconds } from './generics'
 import type { ILogger } from './logger'
@@ -752,6 +752,7 @@ export const generateWAMessageFromContent = (
 	}
 
 	const innerMessage = normalizeMessageContent(message)!
+	const messageContextInfo = message.messageContextInfo
 	const key = getContentType(innerMessage)! as Exclude<keyof proto.IMessage, 'conversation'>
 	const timestamp = unixTimestampSeconds(options.timestamp)
 	const { quoted, userJid } = options
@@ -805,6 +806,19 @@ export const generateWAMessageFromContent = (
 			expiration: options.ephemeralExpiration || WA_DEFAULT_EPHEMERAL
 			//ephemeralSettingTimestamp: options.ephemeralOptions.eph_setting_ts?.toString()
 		}
+	}
+
+	// Messages that carry a messageContextInfo.messageSecret (nativeFlow/interactive,
+	// buttons, polls, events, etc.) require deviceListMetadata to be attached in 1:1
+	// (PN or LID) chats. Without it, WhatsApp clients cannot resolve/decrypt the
+	// message's device fanout and the send silently stalls — it never renders and
+	// callers awaiting the send effectively hang.
+	if (messageContextInfo?.messageSecret && (isPnUser(jid) || isLidUser(jid))) {
+		messageContextInfo.deviceListMetadata = {
+			recipientKeyHash: randomBytes(10),
+			recipientTimestamp: unixTimestampSeconds()
+		}
+		messageContextInfo.deviceListMetadataVersion = 2
 	}
 
 	message = WAProto.Message.create(message)
