@@ -49,7 +49,18 @@ identifiers have been renamed or annotated for clarity.
 
 ## What this fork adds over vanilla Baileys
 
-Inherited from `itsliaaa/Baileys 0.3.18-final`:
+### Enhancements in this fork (v0.3.18-r1)
+
+| Enhancement | Description |
+|-------------|-------------|
+| **NativeFlow header with `text` body** | `nativeFlow` messages now set `header` (image + title + subtitle) even when `text` is used instead of `caption`. Previously the header was silently skipped. |
+| **Carousel card header with `text` body** | Same fix for carousel cards — headers (media, title, subtitle) are now constructed when `card.text` is used, not just `card.caption`. |
+| **`contextInfo` on interactive messages** | Both `nativeFlow` and `carousel` interactive messages now accept a top-level `contextInfo` property, which is embedded directly on the `interactiveMessage` proto. Enables embedded `externalAdReply` banners inside interactive cards. |
+| **Enhanced `externalAdReply`** | Accepts `sourceUrl` as an alias for `url`. Respects a provided `thumbnailUrl` instead of always synthesizing one. Supports `originalImageUrl` for high-res ad images and `showAdAttribution` flag. |
+| **Button text aliases** | All button types (`nativeFlow`, `buttons`, `templateButtons`) now accept `display_text` and `label` as aliases for `text` / `buttonText`. |
+| **Rich table improvements** | `prepareRichResponseMessage` table handling now uses `title || headerText` as the table title fallback, wraps non-array items as single-element arrays for safety, and the `richResponse` array API also normalizes table rows. |
+
+### Inherited from `itsliaaa/Baileys 0.3.18-final`:
 
 - ✅ Newsletter media upload fix (images/video in WA Channels)
 - ✅ Interactive message support (`interactiveMessage`, `nativeFlowMessage`)
