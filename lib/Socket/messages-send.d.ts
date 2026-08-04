@@ -45,6 +45,8 @@ export function makeMessagesSocket(config: any): {
     updateMemberLabel: (jid: any, memberLabel: any) => Promise<any>;
     updateMediaMessage: (message: any) => Promise<any>;
     sendMessage: (jid: any, content: any, options?: {}) => Promise<proto.WebMessageInfo | undefined>;
+    sendStatusMention: (content: any, jids?: string[], options?: any) => Promise<proto.WebMessageInfo | undefined>;
+    sendGroupStatus: (jid: string, content: any, options?: any) => Promise<any>;
     executeWMexQuery: (variables: any, queryId: any, dataPath: any) => Promise<any>;
     newsletterCreate: (name: any, description: any) => Promise<{
         id: any;
