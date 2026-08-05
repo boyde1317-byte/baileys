@@ -166,7 +166,23 @@ The barrel (`src/index.ts`) exports **336 symbols** total.
 
 ---
 
-## Other Enhancements (v0.3.18-r1)
+## Other Enhancements (v0.3.18-r2)
+
+| Enhancement | Description |
+|-------------|-------------|
+| **New native flow button types** | Added `cta_request_location`, `cta_request_phone`, `flow` (WhatsApp Flows), `send_location`, `cta_subscribe`, and arbitrary `name` + `paramsJson` passthrough for future button types. |
+| **Convenience button properties on `buttons`** | The legacy `buttons` message path now supports the same convenience properties (`copy`, `url`, `call`, `location`, `phone`, `flow`) as `nativeFlow`, with icon support. |
+| **Carousel cards without buttons** | Carousel cards no longer require `nativeFlow` buttons — text/image-only cards are now valid. Also added `buttons` as an alias for `nativeFlow` on cards. |
+| **V2 rich response botMetadata** | `buildV2Content` now includes `botMetadata.verificationMetadata` proofs, matching V1 behavior for proper native UI rendering. |
+| **V2 bot JID consistency** | Fixed V2 `buildV2ContextInfo` to use the same bot JID (`867051314767696@bot`) as V1, preventing rendering inconsistencies. |
+| **V2 unifiedResponse encoding** | Fixed base64 string encoding to raw `Buffer` bytes in `generateLinkContent`, `generateLinkContentV2`, and `buildV2Content` — proto `bytes` fields should not be base64 strings. |
+| **V2 messageType enum** | `buildV2Content` now uses `proto.AIRichResponseMessageType.AI_RICH_RESPONSE_TYPE_STANDARD` instead of hardcoded `1`. |
+| **Missing V2 generator: LaTeX inline image** | Added `generateLatexInlineImageContentV2` — V1 had it, V2 was missing it. |
+| **Complete V2 d.ts exports** | `rich-message-utils.d.ts` now exports all V2 generators including `generateListContentV2`, `generateReelContentV2`, `generateReelWithStatsV2`, `generateInlineImageWithTableV2`, `generateMapContentV2`, `generateInlineVideoWithStatsV2`, `generateGridImageContentV2`, `generateDynamicContentV2`, `generateLatexContentV2`, `generateLatexImageContentV2`, `generateLatexInlineImageContentV2`, `buildV2ContextInfo`, `buildV2Content`, and `defaultRenderLatexToPng`. |
+
+### Previous (v0.3.18-r1)
+
+
 
 | Enhancement | Description |
 |-------------|-------------|
