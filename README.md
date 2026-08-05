@@ -57,6 +57,66 @@ generator for backward compatibility.
 | `generateInlineVideoWithStatsContentV2` | `generateInlineVideoWithStatsContent` | `GenAIInlineVideoWithStatsUXPrimitive` |
 | `generateLatexImageContentV2` | `generateLatexImageContent` | `GenAILatexImageUXPrimitive` |
 
+### New Submessage Combinations (v0.3.18-r3)
+
+These combinations produce **visible native UI** when sent — each pairs two
+or more submessage types in a single `richResponseMessage` so WhatsApp
+renders them as a unified card:
+
+| Combination | V1 Generator | V2 Generator | Renders As |
+|-------------|-------------|-------------|------------|
+| Code + Table | `generateCodeWithTable` | `generateCodeWithTableV2` | Syntax-highlighted code → data table below |
+| Map + Table | `generateMapWithTable` | `generateMapWithTableV2` | Interactive map preview → stats table below |
+| Text + Inline Image | `generateTextWithInlineImage` | `generateTextWithInlineImageV2` | Markdown text → inline image below |
+| Multiple Inline Images | `generateMultiInlineImages` | `generateMultiInlineImagesV2` | Stacked images with captions |
+| Grid Image + Table | `generateGridImageWithTable` | `generateGridImageWithTableV2` | Image gallery grid → data table below |
+| Dynamic + Table | `generateDynamicWithTable` | `generateDynamicWithTableV2` | Animated GIF/image → data table below |
+
+All existing single-type generators (`generateTableContent`, `generateCodeBlockContent`,
+`generateMapContent`, etc.) also render natively — the combinations above are new
+multi-type pairings that were not previously available.
+
+### Native Flow Button Types (v0.3.18-r3)
+
+Added 14 new native flow button types for latest WhatsApp features:
+
+| Button Type | Property | Description |
+|------------|----------|-------------|
+| `cta_address` | `address` | Share address form |
+| `cta_sign_in` | `signIn` | Sign-in with token |
+| `cta_sign_contract` | `signContract` | Sign contract with token |
+| `cta_complete_payment` | `completePayment` | Complete payment with token |
+| `cta_review_and_pay` | `reviewAndPay` | Review order & pay |
+| `cta_sign_up` | `signUp` | Sign up with token |
+| `cta_reminder` | `reminder` | Set reminder |
+| `cta_open_chat` | `openChat` | Open chat with target JID |
+| `cta_schedule` | `schedule` | Schedule event |
+| `cta_copy_address` | `copyAddress` | Copy address to clipboard |
+| `cta_amazon_link` | `amazonLink` | Open Amazon product link |
+| `cta_delete_message` | `deleteMessage` | Delete message with key |
+| `cta_payment` | `payment` | Direct payment with amount/currency |
+| `cta_payment_verification` | `paymentVerification` | Verify payment status |
+| `target` | `targetCta` | Generic target CTA |
+
+### Bug Fixes (v0.3.18-r3)
+
+| Fix | Description |
+|-----|-------------|
+| **TABLE typename** | Fixed `GenATableUXPrimitive` → `GenAITableUXPrimitive` (6 instances) — was missing the 'I' in 'GenAI', preventing native table rendering |
+| **nativeFlowMessage messageVersion** | Added `messageVersion: 4` to `prepareNativeFlowButtons` return (was undefined) |
+| **carousel messageVersion** | Bumped from `1` to `3` for latest carousel features |
+| **carouselCardType** | Now defaults to `HSCROLL_CARDS` instead of `UNKNOWN`, with `carouselCardType` override support |
+| **Text-only carousel cards** | Removed mandatory media requirement — text-only cards now valid |
+| **flow_message_version** | Updated from `3` to `4` (latest WhatsApp Flows API version) |
+| **V2 richResponseMessage messageVersion** | Added `messageVersion: 2` to `buildV2Content` and V2 link generators |
+| **V1 prepareRichResponseMessage messageVersion** | Added `messageVersion: 1` for proper proto serialization |
+| **buildBotForwardedMessage messageVersion** | Added `messageVersion: 1` for consistency |
+| **V2 buildV2ContextInfo forwardingScore** | Fixed from `2` to `1` to match V1 behavior |
+| **V1 buildRichContextInfo forwardingScore** | Fixed from `3` to `1` for consistency |
+| **V2 deviceListMetadata** | Replaced empty stub object with `undefined` to prevent proto serialization issues |
+| **botMessageSharingInfo** | Fixed to include `botEntryPointOrigin: 1` alongside `forwardingScore` |
+| **bloksWidget support** | Added `bloksWidget` to interactive messages for Meta AI Bloks components |
+
 ### Structured Metadata Types
 
 These submessage types use structured metadata objects instead of placeholder
@@ -162,7 +222,7 @@ import { jidDecode, jidNormalizedUser }   from 'baileys';
 import { getContentType, normalizeMessageContent } from 'baileys';
 ```
 
-The barrel (`src/index.ts`) exports **336 symbols** total.
+The barrel (`src/index.ts`) exports **349 symbols** total.
 
 ---
 

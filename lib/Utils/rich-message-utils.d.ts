@@ -87,3 +87,19 @@ export function generateLatexImageContentV2(quoted: any, options: any, uploadFn:
 export function generateLatexInlineImageContentV2(quoted: any, options: any, uploadFn: any, renderLatexToPng?: any): Promise<any>;
 
 //# sourceMappingURL=rich-message-utils.d.ts.map
+
+// New submessage combination generators (V1)
+export function generateCodeWithTable(params: any, quoted: any, options?: any): any;
+export function generateMapWithTable(params: any, quoted: any, options?: any): any;
+export function generateTextWithInlineImage(text: any, image: any, quoted: any, options?: any): any;
+export function generateMultiInlineImages(images: any, quoted: any, options?: any): any;
+export function generateGridImageWithTable(params: any, quoted: any, options?: any): any;
+export function generateDynamicWithTable(params: any, quoted: any, options?: any): any;
+
+// New submessage combination generators (V2)
+export function generateCodeWithTableV2(params: any, quoted: any, options?: any): any;
+export function generateMapWithTableV2(params: any, quoted: any, options?: any): any;
+export function generateTextWithInlineImageV2(text: any, image: any, quoted: any, options?: any): any;
+export function generateMultiInlineImagesV2(images: any, quoted: any, options?: any): any;
+export function generateGridImageWithTableV2(params: any, quoted: any, options?: any): any;
+export function generateDynamicWithTableV2(params: any, quoted: any, options?: any): any;

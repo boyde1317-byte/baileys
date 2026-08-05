@@ -247,6 +247,8 @@ declare function makeWASocket(config: any): {
     updateMemberLabel: (jid: any, memberLabel: any) => Promise<any>;
     updateMediaMessage: (message: any) => Promise<any>;
     sendMessage: (jid: any, content: any, options?: {}) => Promise<import("../index.js").proto.WebMessageInfo | undefined>;
+    sendStatusMention: (content: any, jids?: any[], options?: {}) => Promise<import("../index.js").proto.WebMessageInfo | undefined>;
+    sendGroupStatus: (jid: any, content: any, options?: {}) => Promise<import("../index.js").proto.WebMessageInfo | undefined>;
     executeWMexQuery: (variables: any, queryId: any, dataPath: any) => Promise<any>;
     newsletterCreate: (name: any, description: any) => Promise<{
         id: any;
@@ -355,6 +357,8 @@ declare function makeWASocket(config: any): {
     groupRequestParticipantsUpdate: (jid: any, participants: any, action: any) => Promise<any>;
     groupParticipantsUpdate: (jid: any, participants: any, action: any) => Promise<any>;
     groupUpdateDescription: (jid: any, description: any) => Promise<void>;
+    groupUpdatePicture: (jid: any, content: any) => Promise<void>;
+    groupRemovePicture: (jid: any) => Promise<void>;
     groupInviteCode: (jid: any) => Promise<any>;
     groupRevokeInvite: (jid: any) => Promise<any>;
     groupAcceptInvite: (code: any) => Promise<any>;
