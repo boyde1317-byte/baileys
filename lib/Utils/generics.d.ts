@@ -1,3 +1,4 @@
+import type Long from 'long';
 export function promiseTimeout(ms: any, promise: any): Promise<any>;
 export function bindWaitForEvent(ev: any, event: any): (check: any, timeoutMs: any) => Promise<void>;
 export function trimUndefined(obj: any): any;
@@ -15,7 +16,7 @@ export function generateParticipantHashV2(participants: any): string;
 export function encodeWAMessage(message: any): any;
 export function generateRegistrationId(): number;
 export function encodeBigEndian(e: any, t?: number): Uint8Array<ArrayBuffer>;
-export function toNumber(t: any): any;
+export function toNumber(t: Long | number | null | undefined): number;
 export function unixTimestampSeconds(date?: Date): number;
 export function debouncedTimeout(intervalMs: number | undefined, task: any): {
     start: (newIntervalMs: any, newTask: any) => void;

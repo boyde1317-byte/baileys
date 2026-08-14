@@ -402,3 +402,16 @@ NEXORA-MD runs this automatically via the `postinstall` hook.
 
 Based on [itsliaaa/Baileys](https://github.com/itsliaaa/Baileys) which is itself
 a fork of the original [WhiskeySockets/Baileys](https://github.com/WhiskeySockets/Baileys).
+
+## Upstream Sync (v0.3.18-rc14-sync)
+
+Synced against WhiskeySockets/Baileys `v7.0.0-rc14` (July 29, 2026).
+
+### Already Present (verified)
+- **Profile picture tc token nesting** (#2607) — `buildProfilePictureQueryContent` nests tctoken inside the picture node; `t: String(timestamp)` attribute on tctoken nodes; `timestamp === undefined` guard in expiry check. ✅
+- **Android browser support** (#2201) — `Browsers.android()`, experimental warning in `socket.js`, Android platform detection in `validate-connection.js` (skips `webInfo`, uses `Platform.ANDROID`). ✅
+- **WA Web version** — fork is ahead at `[2, 3000, 1044479778]` vs upstream's `[2, 3000, 1043857760]`. ✅
+
+### Applied in This Sync
+- **Long type import** (#2586) — added `import type Long from 'long'` to `lib/Utils/generics.d.ts` and tightened `toNumber` type signature to `Long | number | null | undefined` → `number`. This was a TypeScript-only fix (erased at compile time in `.js`), but downstream TS consumers benefit from the correct type annotation.
+- **Version bump** — `0.3.18-final` → `0.3.18-rc14-sync` to reflect upstream parity.
