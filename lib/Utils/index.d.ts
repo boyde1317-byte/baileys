@@ -16,7 +16,7 @@ export * from "./use-sqlite-auth-state.js";
 export * from "./link-preview.js";
 export * from "./event-buffer.js";
 export * from "./process-message.js";
-export * from "./rich-message-utils.js";
+export * from "./rich/index.js";
 export * from "./message-retry-manager.js";
 export * from "./browser-utils.js";
 export * from "./companion-reg-client-utils.js";
