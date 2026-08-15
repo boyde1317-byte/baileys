@@ -8,7 +8,10 @@
   "scripts": {
     "preinstall": "node ./engine-requirements.js",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "prepare": "node scripts/wa-version-check.js --check 2>/dev/null || true",
+    "version:check": "node scripts/wa-version-check.js --check",
+    "version:update": "node scripts/wa-version-check.js"
   },
   "engines": {
     "node": ">=20.0.0"

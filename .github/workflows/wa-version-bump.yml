@@ -1,0 +1,77 @@
+name: WA Version Auto-Bump
+
+on:
+  schedule:
+    # Run every Monday at 09:00 UTC
+    - cron: '0 9 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  check-version:
+    runs-on: ubuntu-latest
+    outputs:
+      updated: ${{ steps.check.outputs.updated }}
+      new-version: ${{ steps.check.outputs.new-version }}
+      old-version: ${{ steps.check.outputs.old-version }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: upstream-sync-rc14-fixes
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Check & update WA version
+        id: check
+        run: |
+          node scripts/wa-version-check.js
+          # The script exits 0 if updated or already current
+          # It writes NEW_VERSION and OLD_VERSION to GITHUB_ENV
+          if [ -n "$NEW_VERSION" ] && [ "$NEW_VERSION" != "$OLD_VERSION" ]; then
+            echo "updated=true" >> $GITHUB_OUTPUT
+            echo "new-version=$NEW_VERSION" >> $GITHUB_OUTPUT
+            echo "old-version=$OLD_VERSION" >> $GITHUB_OUTPUT
+          else
+            echo "updated=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Verify build after update
+        if: steps.check.outputs.updated == 'true'
+        run: |
+          node -e "import('./lib/index.js').then(m => console.log('Exports:', Object.keys(m).length, 'OK')).catch(e => { console.error('FAIL:', e.message); process.exit(1); })"
+
+      - name: Run tests
+        if: steps.check.outputs.updated == 'true'
+        run: npm test
+
+      - name: Create pull request
+        if: steps.check.outputs.updated == 'true'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: wa-version-bump-${{ steps.check.outputs.new-version }}
+          title: "chore: bump WA Web version to ${{ steps.check.outputs.new-version }}"
+          body: |
+            ## WhatsApp Web Version Update
+
+            **From:** ${{ steps.check.outputs.old-version }}
+            **To:** ${{ steps.check.outputs.new-version }}
+
+            Automated version bump from the WA Version Auto-Bump workflow.
+
+            - [x] Version updated in `lib/Defaults/index.js`
+            - [x] Module load verified (all exports)
+            - [x] Test suite passed
+          commit-message: "chore: bump WA Web version to ${{ steps.check.outputs.new-version }}"
+          labels: |
+            automated
+            version-bump
+          delete-branch: true
+          base: upstream-sync-rc14-fixes
