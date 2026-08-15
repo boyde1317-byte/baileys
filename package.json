@@ -1,7 +1,7 @@
 {
   "name": "baileys",
   "version": "0.3.18-rc14-sync",
-  "description": "Enhanced Baileys v7 fork for NEXORA-MD \u2014 WhatsApp multi-device library with rich Meta AI message types (tables, code blocks, maps, reels, LaTeX), native flow buttons, and protocol-level fixes.",
+  "description": "Enhanced Baileys v7 fork for NEXORA-MD — WhatsApp multi-device library with rich Meta AI message types (tables, code blocks, maps, reels, LaTeX), native flow buttons, and protocol-level fixes.",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
   "type": "module",
@@ -42,7 +42,7 @@
   "license": "MIT",
   "dependencies": {
     "@cacheable/node-cache": "^1.4.0",
-    "@hapi/boom": "^9.1.3",
+    "@hapi/boom": "^10.0.1",
     "async-mutex": "^0.5.0",
     "fflate": "^0.8.2",
     "libsignal": "^6.0.0",
@@ -59,7 +59,7 @@
     "audio-decode": "^2.2.3",
     "better-sqlite3": "^11.0.0",
     "jimp": "^1.6.1",
-    "link-preview-js": "^3.0.0",
+    "link-preview-js": "^4.0.4",
     "mathjax-node": "^0.5.1",
     "sharp": "*"
   },
