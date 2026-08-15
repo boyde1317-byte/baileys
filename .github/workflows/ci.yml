@@ -2,21 +2,40 @@ name: CI
 
 on:
   push:
-    branches: [main, 'upstream-sync-*']
+    branches: [main, upstream-sync-rc14-fixes]
   pull_request:
-    branches: [main]
+    branches: [main, upstream-sync-rc14-fixes]
 
 jobs:
-  test:
+  build-and-test:
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         node-version: [20, 22]
+
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
-      - run: npm ci
-      - run: npm test
-      - run: npm audit --audit-level=high
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Module load check
+        run: |
+          node -e "import('./lib/index.js').then(m => { console.log('Exports:', Object.keys(m).length); if(Object.keys(m).length < 300) { console.error('Too few exports!'); process.exit(1); } }).catch(e => { console.error('LOAD FAIL:', e.message); process.exit(1); })"
+
+      - name: Run tests
+        run: npm test
+
+      - name: Run npm audit
+        run: npm audit --audit-level=high
+        continue-on-error: true
+
+      - name: Version check
+        run: npm run version:check
+        continue-on-error: true

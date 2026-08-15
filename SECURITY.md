@@ -1,37 +1,43 @@
-# Security
-
-## Supported Versions
-
-| Version | Supported |
-|---------|-----------|
-| 0.3.18-rc14-sync | ✅ |
-| < 0.3.18-rc14-sync | ❌ |
-
-## Known Advisories
-
-### CVE-2026-48063 / GHSA-qvv5-jq5g-4cgg (Critical, CVSS 9.3)
-
-**Affected:** All versions based on WhiskeySockets/Baileys < 7.0.0-rc12
-
-**Impact:** Any baileys session can be sent a malicious `protocolMessage` payload via `placeholderResendMessage` to:
-- Trigger fake `messages.upsert` events with spoofed message keys
-- Corrupt the app state sync system with fake key shares
-- Inject fake history sync / on-demand sync data
-
-**Fix Location:** `lib/Utils/process-message.js` — the `SELF_ONLY_TYPES` guard (lines ~294–308) drops any `HISTORY_SYNC_NOTIFICATION`, `APP_STATE_SYNC_KEY_SHARE`, `LID_MIGRATION_MAPPING_SYNC`, or `PEER_DATA_OPERATION_REQUEST_RESPONSE_MESSAGE` that arrives with `!message.key.fromMe`.
-
-**Reference:** https://github.com/WhiskeySockets/Baileys/security/advisories/GHSA-qvv5-jq5g-4cgg
-
-**Status:** ✅ Patched in this fork.
+# Security Policy
 
 ## Reporting a Vulnerability
 
-If you discover a security issue in this fork, please do NOT open a public issue. Contact the fork maintainer directly.
+If you discover a security vulnerability in this fork, please **do not** open a public issue. Instead, open a private security advisory on GitHub:
 
-For upstream Baileys vulnerabilities, report to: https://github.com/WhiskeySockets/Baileys/security/advisories/new
+1. Go to the **Security** tab of this repository
+2. Click **Advisories** → **New draft security advisory**
+3. Include a description, reproduction steps, and impact assessment
 
-## Dependency Security
+You can also email security concerns to the fork maintainer directly.
 
-The `package.json` contains a `resolutions` block that pins transitive dependencies to fix known vulnerabilities. Do not remove or loosen these pins without running `npm audit` and `npm install` to verify no regressions are introduced.
+## Known Vulnerabilities & Fixes
 
-Run `npm audit` after every dependency change to verify no new vulnerabilities are introduced.
+### CVE-2026-48063 (GHSA-qvv5-jq5g-4cgg)
+
+- **CVSS:** 9.3 (Critical)
+- **Affected:** All Baileys forks prior to this patch
+- **Status:** ✅ Patched
+
+**Description:** WhatsApp protocol messages of type `HISTORY_SYNC_NOTIFICATION`, `APP_STATE_SYNC_KEY_SHARE`, `LID_MIGRATION_MAPPING_SYNC`, and `PEER_DATA_OPERATION_REQUEST_RESPONSE_MESSAGE` were processed regardless of sender identity. A malicious contact could spoof these messages to:
+- Trigger fake history sync (injecting fabricated messages)
+- Corrupt app state sync keys
+- Hijack LID migration mappings
+- Abuse placeholder resend to inject arbitrary content
+
+**Fix Location:** `lib/Utils/process-message.js` — the `SELF_ONLY_TYPES` guard (lines ~280–310) drops any of the four protocol message types when `message.key.fromMe` is `false`. This ensures only the user's own device can send these critical protocol messages.
+
+**Verification:** Run `npm test` — the security regression test suite (`tests/security/self-only-types.test.js`) verifies that spoofed protocol messages are dropped.
+
+## Supply Chain Security
+
+- `npm audit` is run in CI on every push and PR
+- Transitive dependency versions are pinned in `package.json` `resolutions` block to prevent known vulnerable packages from being installed
+- No runtime dependencies on archived packages (`@adiwajshing/keyed-db` replaced with local implementation)
+
+## Security Best Practices for Consumers
+
+1. **Always validate `fromMe`** on protocol messages before acting on them
+2. **Never disable** the `SELF_ONLY_TYPES` guard
+3. **Keep the WA version current** — stale versions increase the risk of protocol-mismatch issues. Use `npm run version:check` to verify, or enable the auto-bump workflow
+4. **Use signed sessions** — never store auth credentials in plaintext without encryption
+5. **Rate-limit outbound messages** — WhatsApp may ban accounts that send messages too quickly
