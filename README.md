@@ -77,26 +77,27 @@ All existing single-type generators (`generateTableContent`, `generateCodeBlockC
 multi-type pairings that were not previously available.
 
 ### Native Flow Button Types (v0.3.18-r3)
+Removed 16 non-working native flow button types that WhatsApp does not recognize
+(WhatsApp silently ignores unknown `nativeFlowButton.name` values — these were
+never rendered): `cta_address`, `cta_sign_in`, `cta_sign_contract`,
+`cta_complete_payment`, `cta_review_and_pay`, `cta_sign_up`, `cta_reminder`,
+`cta_open_chat`, `cta_schedule`, `cta_copy_address`, `cta_amazon_link`,
+`cta_delete_message`, `cta_payment`, `cta_payment_verification`,
+`cta_subscribe`, `target`.
 
-Added 14 new native flow button types for latest WhatsApp features:
+**Confirmed working native flow button types:**
 
 | Button Type | Property | Description |
 |------------|----------|-------------|
-| `cta_address` | `address` | Share address form |
-| `cta_sign_in` | `signIn` | Sign-in with token |
-| `cta_sign_contract` | `signContract` | Sign contract with token |
-| `cta_complete_payment` | `completePayment` | Complete payment with token |
-| `cta_review_and_pay` | `reviewAndPay` | Review order & pay |
-| `cta_sign_up` | `signUp` | Sign up with token |
-| `cta_reminder` | `reminder` | Set reminder |
-| `cta_open_chat` | `openChat` | Open chat with target JID |
-| `cta_schedule` | `schedule` | Schedule event |
-| `cta_copy_address` | `copyAddress` | Copy address to clipboard |
-| `cta_amazon_link` | `amazonLink` | Open Amazon product link |
-| `cta_delete_message` | `deleteMessage` | Delete message with key |
-| `cta_payment` | `payment` | Direct payment with amount/currency |
-| `cta_payment_verification` | `paymentVerification` | Verify payment status |
-| `target` | `targetCta` | Generic target CTA |
+| `quick_reply` | `id` | Simple reply that sends its id back |
+| `single_select` | `sections` | In-button picker list |
+| `cta_url` | `url` | Open URL in browser |
+| `cta_copy` | `copy` | Copy text to clipboard |
+| `cta_call` | `call` | Tap to dial phone number |
+| `cta_request_location` | `location` | Request user's location |
+| `cta_request_phone` | `phone` | Request user's phone number |
+| `send_location` | `sendLocation` | Send location (special flow) |
+| `flow` | `flow` | Launch a WhatsApp Flow |
 
 ### Bug Fixes (v0.3.18-r3)
 
@@ -230,7 +231,7 @@ The barrel (`src/index.ts`) exports **349 symbols** total.
 
 | Enhancement | Description |
 |-------------|-------------|
-| **New native flow button types** | Added `cta_request_location`, `cta_request_phone`, `flow` (WhatsApp Flows), `send_location`, `cta_subscribe`, and arbitrary `name` + `paramsJson` passthrough for future button types. |
+| **Native flow button cleanup** | Removed 16 non-working button types; kept only confirmed working types: `quick_reply`, `single_select`, `cta_url`, `cta_copy`, `cta_call`, `cta_request_location`, `cta_request_phone`, `send_location`, `flow`. Arbitrary `name` + `paramsJson` passthrough still supported. |
 | **Convenience button properties on `buttons`** | The legacy `buttons` message path now supports the same convenience properties (`copy`, `url`, `call`, `location`, `phone`, `flow`) as `nativeFlow`, with icon support. |
 | **Carousel cards without buttons** | Carousel cards no longer require `nativeFlow` buttons — text/image-only cards are now valid. Also added `buttons` as an alias for `nativeFlow` on cards. |
 | **V2 rich response botMetadata** | `buildV2Content` now includes `botMetadata.verificationMetadata` proofs, matching V1 behavior for proper native UI rendering. |
