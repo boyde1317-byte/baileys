@@ -41,7 +41,7 @@
   "author": "Lia Wynn",
   "license": "MIT",
   "dependencies": {
-    "@cacheable/node-cache": "^1.4.0",
+    "@cacheable/node-cache": "^3.1.1",
     "@hapi/boom": "^10.0.1",
     "async-mutex": "^0.5.0",
     "fflate": "^0.8.2",
