@@ -8,6 +8,28 @@
 
 ---
 
+<!-- COMPLETION STATUS -->
+## Completion Summary (Updated 2026-08-15)
+
+| Phase | Status | Commit(s) |
+|-------|--------|-----------|
+| 1. Security Hardening | ✅ Done | `0a5a81e`, `27c8991` |
+| 2.1 Replace keyed-db | ✅ Done | `0a5a81e` |
+| 2.2 Bump deps | ✅ Done | `d26e230`, `850f7f6`, `18cee86`, `6f4f648` |
+| 2.3 Replace mathjax-node | ✅ Done | `ef43e13` |
+| 3. Test Infrastructure | ✅ Core done | `0a5a81e`, `ef43e13` — 25 tests, 3 files |
+| 4. Code Organization | ✅ Done | `8348c20` |
+| 5. LID/PN Mapping | ✅ Done | `62b8983` |
+| 6. CI/CD Pipeline | ✅ Done | `27c8991`, `e0ba7e7` |
+| 7. Dev Experience | ✅ Done | `ef43e13`, `27c8991` |
+| Extra: Remove dead button types | ✅ Done | `27c00fd` |
+
+**Remaining (non-critical):**
+- Phase 3: Additional tests for generics.js, decode-wa-message.js, messages-recv.js, messages-media.js
+- Phase 7.2: TypeScript strict mode (low priority — no TS source files exist)
+
+---
+
 ## 1. Current State Assessment
 
 ### What's Working Well ✅
