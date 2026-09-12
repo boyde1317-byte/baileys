@@ -98,7 +98,7 @@ Added 14 new native flow button types for latest WhatsApp features:
 
 | Button Type | Property | Description |
 |------------|----------|-------------|
-| `cta_address` | `address` | Share address form |
+| `address_message` | `address` | Share address form — name matches NIXCODE 4.5 (proven); `cta_address` is not a verified name |
 | `cta_sign_in` | `signIn` | Sign-in with token |
 | `cta_sign_contract` | `signContract` | Sign contract with token |
 | `cta_complete_payment` | `completePayment` | Complete payment with token |
@@ -166,6 +166,7 @@ await sock.sendMessage(jid, { rich: true, products: shopData }); // ✅
 | **Experimental CTA gating** | Unverified CTAs require explicit opt-in (`experimentalCta` / `experimental`) |
 | **Generic key routing** | `items`/`posts`/`products`/`suggested` only route to the rich builder with `rich: true` |
 | **`sendGroupStatus` statusSourceType** | Was checked at the wrong nesting level — never matched, so `statusSourceType` was never set |
+| **`address` CTA name** | `button.address` now emits `address_message` (NIXCODE 4.5's proven name) instead of the unverified `cta_address` — moved out of the experimental set |
 
 ### Structured Metadata Types
 
