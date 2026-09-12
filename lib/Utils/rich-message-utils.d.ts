@@ -1,3 +1,4 @@
+export function encodeUnifiedResponseData(unified: any): string;
 export function tokenizeCode(code: any, language?: string): {
     highlightType: any;
     codeContent: string | undefined;
