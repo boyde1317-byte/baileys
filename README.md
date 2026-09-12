@@ -167,6 +167,7 @@ await sock.sendMessage(jid, { rich: true, products: shopData }); // ✅
 | **Generic key routing** | `items`/`posts`/`products`/`suggested` only route to the rich builder with `rich: true` |
 | **`sendGroupStatus` statusSourceType** | Was checked at the wrong nesting level — never matched, so `statusSourceType` was never set |
 | **`address` CTA name** | `button.address` now emits `address_message` (NIXCODE 4.5's proven name) instead of the unverified `cta_address` — moved out of the experimental set |
+| **`tip` metadata text** | New `tip` key (top-level or `richResponse` entry) renders as `GenAIMetadataTextPrimitive` (NIXCODE's `addTip`) — closes the last gap in the proven Moonson facebook.js combo |
 
 ### Structured Metadata Types
 
@@ -198,6 +199,54 @@ const content = generateLatexImageContent({
 
 > `mathjax-node` is an optional peer dependency. Install it with
 > `npm install mathjax-node` to enable default LaTeX-to-PNG rendering.
+
+### Tip / Metadata Text (GenAIMetadataTextPrimitive)
+
+The small hint line under rich content (NIXCODE's `addTip`) — available as a
+top-level `tip` key or a `richResponse` entry. It renders as
+`GenAIMetadataTextPrimitive` in the V2 layout, not as regular markdown text:
+
+```js
+// The proven Moonson facebook.js combo, in fork API:
+await sock.sendMessage(jid, {
+  richResponse: [
+    { gridImage: 'https://example.com/thumb.jpg' },
+    { inlineVideo: { videoUrl: 'https://example.com/v.mp4', title: 'Facebook Video' } },
+    { text: '» Title: Facebook Video\n» Link: https://example.com' },
+    { tip: 'Tap the video to play' },
+  ],
+  footerText: '© Moonson Aizen',
+  quoted: repliedMessage,
+});
+```
+
+### Proven vs Experimental Reference
+
+Judged against what actually ships in the wild — **Moonson** (production
+usage), **NIXCODE 4.5** (builder surface), and **itsliaaa/Baileys**
+(library support) — not what merely compiles.
+
+**Proven native flow CTAs** (NIXCODE emits these, clients render them):
+`quick_reply`, `cta_url`, `cta_copy`, `cta_call`, `single_select`,
+`cta_reminder`, `cta_cancel_reminder`, `send_location`, `address_message`,
+`flow` (official WhatsApp Flows API). All wrapped in the `native_flow`
+tag `name: 'mixed'` v9 envelope.
+
+**Proven V2 GenAI primitives** (NIXCODE 4.5 surface): markdown text (with
+inline hyperlink/citation/LaTeX items), code block, table, sources row, grid
+image, video/reel, product card, post, metadata text (tip), follow-up
+suggestion pills.
+
+**Proven V1 submessages** (itsliaaa support + ecosystem usage — TEXT, CODE,
+TABLE, LATEX, GRID_IMAGE, CONTENT_ITEMS strongest; INLINE_IMAGE, DYNAMIC,
+MAP supported but with thinner in-the-wild evidence).
+
+**Experimental** — the 13 remaining fork CTAs (`cta_sign_in`,
+`cta_sign_contract`, `cta_complete_payment`, `cta_review_and_pay`,
+`cta_sign_up`, `cta_open_chat`, `cta_schedule`, `cta_copy_address`,
+`cta_amazon_link`, `cta_delete_message`, `cta_payment`,
+`cta_payment_verification`, `target`). No reference implementation ships
+them; they stay gated behind `experimentalCta`.
 
 ### Context Info Unification (V1/V2)
 

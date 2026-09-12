@@ -23,6 +23,12 @@ confirm the bubble **renders instead of showing blank**:
 - [ ] `map`
 - [ ] V2 spot-checks: `generateTableContentV2`, `generateReelContentV2`
 
+## 1b. The proven Moonson combo (facebook.js card)
+
+- [ ] `gridImage` + `inlineVideo` + `text` + `tip` + `footerText` + `quoted`
+      in one message — image gallery, tappable video, markdown, small hint
+      line under the content, footer, reply preview
+
 ## 2. Quoted / reply support
 
 - [ ] Send a rich message with `quoted` set to a real message
