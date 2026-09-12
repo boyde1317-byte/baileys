@@ -29,6 +29,12 @@ confirm the bubble **renders instead of showing blank**:
       in one message — image gallery, tappable video, markdown, small hint
       line under the content, footer, reply preview
 
+## 1c. NIXCODE-parity extras
+
+- [ ] `sources` entry → sources strip renders (favicon + name, tappable)
+- [ ] `suggested` entry → tappable follow-up **pills**, not a plain text list
+- [ ] `cancelReminder` button → renders as a Cancel Reminder CTA
+
 ## 2. Quoted / reply support
 
 - [ ] Send a rich message with `quoted` set to a real message

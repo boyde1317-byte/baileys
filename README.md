@@ -168,6 +168,9 @@ await sock.sendMessage(jid, { rich: true, products: shopData }); // ✅
 | **`sendGroupStatus` statusSourceType** | Was checked at the wrong nesting level — never matched, so `statusSourceType` was never set |
 | **`address` CTA name** | `button.address` now emits `address_message` (NIXCODE 4.5's proven name) instead of the unverified `cta_address` — moved out of the experimental set |
 | **`tip` metadata text** | New `tip` key (top-level or `richResponse` entry) renders as `GenAIMetadataTextPrimitive` (NIXCODE's `addTip`) — closes the last gap in the proven Moonson facebook.js combo |
+| **`cta_cancel_reminder` button** | Was in the verified list but no mapper branch could ever emit it — new `cancelReminder` button property (params mirror NIXCODE's `addCancelReminder`) |
+| **`suggested` → suggestion pills** | `suggested` now renders as `GenAIFollowUpSuggestionPillPrimitive` pills in a `GenAIActionRowLayoutViewModel` (NIXCODE's `addSuggest`) instead of plain markdown text |
+| **`sources` key** | New `sources` key (top-level or `richResponse` entry) renders the sources strip as `GenAISearchResultPrimitive` (NIXCODE's `addSource`) — accepts NIXCODE's string-array groups or `{ profileUrl, url, title }` objects |
 
 ### Structured Metadata Types
 
@@ -235,7 +238,11 @@ tag `name: 'mixed'` v9 envelope.
 **Proven V2 GenAI primitives** (NIXCODE 4.5 surface): markdown text (with
 inline hyperlink/citation/LaTeX items), code block, table, sources row, grid
 image, video/reel, product card, post, metadata text (tip), follow-up
-suggestion pills.
+suggestion pills. The fork now emits every one of these — full NIXCODE
+primitive parity (grid image / video / product / post use the
+liaaa-family primitives; NIXCODE uses `GenAIImaginePrimitive` /
+`GenAIReelPrimitive` / `GenAIProductItemCardPrimitive` / `GenAIPostPrimitive`
+— same submessage types, both families render in the wild).
 
 **Proven V1 submessages** (itsliaaa support + ecosystem usage — TEXT, CODE,
 TABLE, LATEX, GRID_IMAGE, CONTENT_ITEMS strongest; INLINE_IMAGE, DYNAMIC,
