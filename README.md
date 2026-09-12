@@ -45,6 +45,11 @@ V2 generators produce the `unifiedResponse.data` base64-encoded JSON format
 that Meta AI clients use natively. Each V2 generator has a corresponding V1
 generator for backward compatibility.
 
+> **v0.3.18-r4:** the **V1 path base64-encodes too** — both paths now share
+> one encoding helper, `encodeUnifiedResponseData(payload)`, matching the
+> convention used by NIXCODE and `ourin-baileys`. Previously the V1 path sent
+> a raw JSON buffer, which can render blank on some clients.
+
 | V2 Generator | V1 Counterpart | UX Primitive |
 |-------------|----------------|-------------|
 | `generateTableContentV2` | `generateTableContent` | `GenAITableUXPrimitive` |
@@ -79,6 +84,17 @@ multi-type pairings that were not previously available.
 ### Native Flow Button Types (v0.3.18-r3)
 
 Added 14 new native flow button types for latest WhatsApp features:
+
+> **Experimental gating (v0.3.18-r4):** the CTA names below are **not
+> verified** against current WhatsApp clients — unverified names can get the
+> whole message rejected or render dead buttons. Sending one without opting
+> in now throws a `400` error. Opt in per-message with
+> `experimentalCta: true`, or per-button with `experimental: true`.
+>
+> Never gated: the well-known CTAs (`quick_reply`, `cta_copy`, `cta_url`,
+> `cta_call`, `single_select`, `cta_request_location`, `cta_request_phone`,
+> `send_location`, `flow`, `cta_reminder`, `cta_cancel_reminder`,
+> `address_message`) and the raw `{ name, paramsJson }` passthrough.
 
 | Button Type | Property | Description |
 |------------|----------|-------------|
@@ -117,10 +133,45 @@ Added 14 new native flow button types for latest WhatsApp features:
 | **botMessageSharingInfo** | Fixed to include `botEntryPointOrigin: 1` alongside `forwardingScore` |
 | **bloksWidget support** | Added `bloksWidget` to interactive messages for Meta AI Bloks components |
 
+### Content Routing (v0.3.18-r4)
+
+`generateWAMessageContent` routes to the rich response builder when the
+message contains any specific rich key: `code`, `links`, `table`, `latex`,
+`richResponse`, `inlineImage`, `gridImage`, `inlineVideo`, `dynamic`.
+
+The generic keys — `items`, `posts`, `products`, `suggested` — can collide
+with other content types, so they only route to the rich builder when the
+message explicitly opts in with `rich: true`:
+
+```js
+// plain content key, NOT routed (previously hijacked)
+await sock.sendMessage(jid, { products: shopData }); // ❌
+
+// explicit opt-in
+await sock.sendMessage(jid, { rich: true, products: shopData }); // ✅
+```
+
+### Hardening (v0.3.18-r4)
+
+| Fix | Description |
+|-----|-------------|
+| **base64 unifiedResponse (V1+V2)** | Both paths now base64-encode `unifiedResponse.data` via shared `encodeUnifiedResponseData` — raw JSON buffers can render blank (matches NIXCODE / ourin-baileys) |
+| **`code` without `language`** | Fixed `TypeError: Assignment to constant variable` (`language ||=` on a destructured const) |
+| **LaTeX text dropped** | `text`/`contentText` were never passed through — `latexMetadata.text` was always `undefined` |
+| **Quoted/reply support** | `prepareRichResponseMessage` now honors `quoted` on the content object |
+| **Donation citation fallbacks** | Removed hardcoded `For Donation via Saweria` / `Donation` defaults in `links` citations |
+| **Ragged table rows** | Rows are padded to equal width (NIXCODE / ourin-baileys behavior) — uneven rows render blank cells |
+| **One AI bot JID** | Single `AI_BOT_JID` constant shared by the V1/V2 context builders |
+| **Button mapper dedup** | The ~350-line button mapping that existed twice (`prepareNativeFlowButtons` + legacy `buttons` path) is now one shared `mapButtonToNativeFlow` (−427 lines); both paths stay in sync automatically |
+| **Experimental CTA gating** | Unverified CTAs require explicit opt-in (`experimentalCta` / `experimental`) |
+| **Generic key routing** | `items`/`posts`/`products`/`suggested` only route to the rich builder with `rich: true` |
+| **`sendGroupStatus` statusSourceType** | Was checked at the wrong nesting level — never matched, so `statusSourceType` was never set |
+
 ### Structured Metadata Types
 
 These submessage types use structured metadata objects instead of placeholder
-stubs (fixed in commit `9b1f70a`):
+stubs (fixed in commit `9b1f70a`). Remember the `rich: true` opt-in from
+[Content Routing](#content-routing-v0318-r4) above:
 
 | Key | Shape | Usage |
 |-----|-------|-------|
@@ -150,15 +201,24 @@ const content = generateLatexImageContent({
 ### Context Info Unification (V1/V2)
 
 `buildRichContextInfo` produces a unified `contextInfo` object used by both V1
-and V2 generators — consistent bot JID (`867051314767696@bot`), forwarding
-score (1), and `forwardOrigin: 4`. Quoted messages are supported via the
-`quoted` parameter.
+and V2 generators — one shared `AI_BOT_JID` constant (`867051314767696@bot`),
+forwarding score (1), and `forwardOrigin: 4`. Quoted messages are supported
+via the `quoted` parameter — and since **v0.3.18-r4** you can pass `quoted`
+directly on the content object handed to `prepareRichResponseMessage` /
+`sendMessage`, so rich messages can reply to other messages.
 
-### Fallback Handling
+### Error Handling (v0.3.18-r4)
 
-Unknown submessage types in the `richResponse` array no longer cause proto
-serialization errors. The fallback path in `prepareRichResponseMessage` returns
-the raw submessage object, and consumers handle graceful degradation to text.
+Unknown entries in the `richResponse` array now **throw a descriptive
+`Error`** listing the supported keys, instead of being silently skipped —
+silent drops are a nightmare to debug in production. Pre-formed submessages
+(`{ messageType, messageText }` or `{ messageType, *Metadata }`) still pass
+through unchanged for advanced usage:
+
+```js
+prepareRichResponseMessage({ richResponse: [{ nope: true }] }); // throws
+prepareRichResponseMessage({ richResponse: [{ messageType: 2, messageText: 'ok' }] }); // passes through
+```
 
 ---
 
@@ -203,6 +263,7 @@ import {
 import {
   RichSubMessageType,        // enum: GRID_IMAGE=1, TEXT=2, ... CONTENT_ITEMS=9
   buildRichContextInfo,      // unified contextInfo builder (V1/V2)
+  encodeUnifiedResponseData, // base64-encodes a unified payload (shared V1/V2)
   defaultRenderLatexToPng,    // mathjax-node-based LaTeX->PNG renderer
   wrapToBotForwardedMessage,  // wraps rich content in botForwardedMessage envelope
 } from 'baileys';
@@ -334,22 +395,26 @@ sock.ev.on('connection.update', ({ connection, lastDisconnect }) => {
 ### Sending Rich Messages
 
 ```js
-import { prepareRichResponseMessage, wrapToBotForwardedMessage } from 'baileys';
+// sendMessage routes rich keys automatically — no manual wrapping needed:
+await sock.sendMessage(jid, {
+  headerText: 'Results',
+  table: [['Name', 'Score'], ['Alice', '95']],
+  code: 'console.log("hello")',
+  footerText: 'Generated by NEXORA-MD',
+  quoted: repliedMessage,   // v0.3.18-r4: rich messages can reply
+});
 
-// Build a rich message with table + code submessages
-const richContent = {
+// Array form via richResponse:
+await sock.sendMessage(jid, {
   richResponse: [
     { text: 'Here are the results:' },
     { table: { title: 'Stats', rows: [{ items: ['Name', 'Score'] }, { items: ['Alice', '95'] }] } },
-    { code: [{ codeContent: 'console.log("hello")' }], language: 'javascript' },
   ],
   footerText: 'Generated by NEXORA-MD',
-};
+});
 
-const prepared = prepareRichResponseMessage(richContent, null, {});
-const wrapped = wrapToBotForwardedMessage(prepared, sock.user.jid);
-
-await sock.relayMessage(jid, wrapped, {});
+// Generic keys need the explicit opt-in (see Content Routing):
+await sock.sendMessage(jid, { rich: true, products: { title: 'Shop', items: [...] } });
 ```
 
 ### Consuming Rich Messages
@@ -371,10 +436,9 @@ sock.ev.on('messages.upsert', async ({ messages }) => {
       }
 
       if (rich?.unifiedResponse?.data) {
-        // V2: decode base64 unifiedResponse
-        const decoded = JSON.parse(
-          Buffer.from(rich.unifiedResponse.data, 'base64').toString('utf8')
-        );
+        // V1 and V2 both base64-encode: data is bytes of a base64 string
+        const base64 = Buffer.from(rich.unifiedResponse.data).toString('utf8');
+        const decoded = JSON.parse(Buffer.from(base64, 'base64').toString('utf8'));
         console.log(decoded.sections);
       }
     }
@@ -402,3 +466,6 @@ NEXORA-MD runs this automatically via the `postinstall` hook.
 
 Based on [itsliaaa/Baileys](https://github.com/itsliaaa/Baileys) which is itself
 a fork of the original [WhiskeySockets/Baileys](https://github.com/WhiskeySockets/Baileys).
+The V2 rich message generators are ported from `ourin-baileys` (npm), and the
+base64 `unifiedResponse` convention and table normalization follow NIXCODE.
+Rich message utilities retain their original attribution notes.
