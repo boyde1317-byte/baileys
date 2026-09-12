@@ -35,6 +35,20 @@ confirm the bubble **renders instead of showing blank**:
 - [ ] `suggested` entry → tappable follow-up **pills**, not a plain text list
 - [ ] `cancelReminder` button → renders as a Cancel Reminder CTA
 
+## 1d. primitiveStyle A/B (nixcode vs default)
+
+Send the same card twice — once with `primitiveStyle: 'nixcode'`, once
+without — and compare on the same device:
+
+- [ ] `gridImage` (nixcode): each image renders from its own
+      `GenAIImaginePrimitive` section
+- [ ] `inlineVideo` (nixcode): video plays inline via the ANIMATE section
+      (pass `duration`)
+- [ ] `products` (nixcode): product card with brand/price
+- [ ] `posts` (nixcode): post card with username/likes/comments
+- [ ] Whichever style renders best on device becomes the default before
+      the next tag
+
 ## 2. Quoted / reply support
 
 - [ ] Send a rich message with `quoted` set to a real message

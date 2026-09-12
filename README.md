@@ -171,6 +171,8 @@ await sock.sendMessage(jid, { rich: true, products: shopData }); // ✅
 | **`cta_cancel_reminder` button** | Was in the verified list but no mapper branch could ever emit it — new `cancelReminder` button property (params mirror NIXCODE's `addCancelReminder`) |
 | **`suggested` → suggestion pills** | `suggested` now renders as `GenAIFollowUpSuggestionPillPrimitive` pills in a `GenAIActionRowLayoutViewModel` (NIXCODE's `addSuggest`) instead of plain markdown text |
 | **`sources` key** | New `sources` key (top-level or `richResponse` entry) renders the sources strip as `GenAISearchResultPrimitive` (NIXCODE's `addSource`) — accepts NIXCODE's string-array groups or `{ profileUrl, url, title }` objects |
+| **`primitiveStyle: 'nixcode'`** | Opt-in switch that emits NIXCODE 4.5's exact V2 primitives — `GenAIImaginePrimitive` (IMAGE/ANIMATE), `GenAIProductItemCardPrimitive`, `GenAIPostPrimitive` — instead of the liaaa-family primitives. V1 submessages are unchanged, so V1 fallbacks stay intact |
+| **`gridImage` bare arrays** | A bare string array (`{ gridImage: [url, ...] }`) now means `[main, ...others]`, matching NIXCODE's `addImage` |
 
 ### Structured Metadata Types
 
@@ -223,6 +225,30 @@ await sock.sendMessage(jid, {
 });
 ```
 
+### primitiveStyle: 'nixcode'
+
+By default the fork emits the liaaa-family V2 primitives
+(`GenAIGridImageUXPrimitive`, `GenAIContentItemsUXPrimitive`, …) — the
+proven path. Setting `primitiveStyle: 'nixcode'` switches section
+generation to NIXCODE 4.5's exact shapes:
+
+| content | default (liaaa) | nixcode |
+|---|---|---|
+| `gridImage` | `GenAIGridImageUXPrimitive` | one `GenAIImaginePrimitive` (IMAGE) section per image |
+| `inlineVideo` | `GenAIContentItemsUXPrimitive` (reel item) | `GenAIImaginePrimitive` (ANIMATE, with `duration`) |
+| `products` | `GenAIContentItemsUXPrimitive` (reel item) | `GenAIProductItemCardPrimitive` (Single/HScroll like NIXCODE `addProduct`) |
+| `posts` | `GenAIContentItemsUXPrimitive` (reel item) | `GenAIPostPrimitive` (HScroll like NIXCODE `addPost`) |
+
+Notes:
+- Only the V2 unified sections change — the V1 submessages are untouched,
+  so clients that ignore V2 keep working (NIXCODE instead sends
+  placeholder text like `[ CANNOT_LOAD_VIDEO - NIXEL ]` as the V1
+  submessage; the fork keeps real content there).
+- `normalizeProductCards` / `normalizePostCards` accept both NIXCODE field
+  names (`product_url`, `sale_price`, `likes_count`, …) and the fork's.
+- Intended for A/B device testing: whichever style renders best becomes
+  the default for the next tag.
+
 ### Proven vs Experimental Reference
 
 Judged against what actually ships in the wild — **Moonson** (production
@@ -238,11 +264,14 @@ tag `name: 'mixed'` v9 envelope.
 **Proven V2 GenAI primitives** (NIXCODE 4.5 surface): markdown text (with
 inline hyperlink/citation/LaTeX items), code block, table, sources row, grid
 image, video/reel, product card, post, metadata text (tip), follow-up
-suggestion pills. The fork now emits every one of these — full NIXCODE
-primitive parity (grid image / video / product / post use the
-liaaa-family primitives; NIXCODE uses `GenAIImaginePrimitive` /
-`GenAIReelPrimitive` / `GenAIProductItemCardPrimitive` / `GenAIPostPrimitive`
-— same submessage types, both families render in the wild).
+suggestion pills. The fork now emits every one of these. For grid image /
+video / product / post the fork defaults to the liaaa-family primitives
+(`GenAIGridImageUXPrimitive`, `GenAIContentItemsUXPrimitive`); NIXCODE uses
+`GenAIImaginePrimitive` (IMAGE for `addImage`, ANIMATE for `addVideo`) /
+`GenAIReelPrimitive` (`addReels`) / `GenAIProductItemCardPrimitive` /
+`GenAIPostPrimitive`. Same submessage types, both families render in the
+wild — and `primitiveStyle: 'nixcode'` lets you emit NIXCODE's exact shapes
+for A/B testing.
 
 **Proven V1 submessages** (itsliaaa support + ecosystem usage — TEXT, CODE,
 TABLE, LATEX, GRID_IMAGE, CONTENT_ITEMS strongest; INLINE_IMAGE, DYNAMIC,
