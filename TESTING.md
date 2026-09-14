@@ -121,10 +121,17 @@ device-proven shape is NIXCODE/Moonson's `GenAIImaginePrimitive`, now
 reachable via `primitiveStyle: 'nixcode'` in all V1 and V2 generators.
 
 ## Experimental ⚠️
-- **Maps** — no proven primitive exists (Moonson/NIXCODE ship no map card).
-  Renders caption-only. Test kit labels these EXPERIMENTAL.
-- **LaTeX→PNG** — needs `mathjax-node` installed; otherwise falls back to
-  the instructional text message (by design).
+- **Maps** — FIXED 2026-09-14: no proven GenAIMapUXPrimitive exists
+  (Moonson/NIXCODE ship no map card; it painted caption-only). Maps now
+  render as a static OSM tile (GenAIImaginePrimitive — proven) + a
+  markdown info section with annotation details + OSM attribution.
+  Tile zoom 16, centered on the first annotation. PENDING device re-verify.
+- **LaTeX** — FIXED 2026-09-14: the standalone GenAILatexUXPrimitive
+  painted caption-only. LaTeX now uses the proven NIXCODE anatomy:
+  GenAILatexItem INLINE ENTITIES inside a GenAIMarkdownTextUXPrimitive,
+  with {{NIXEL_LATEX_n}}expr{{/NIXEL_LATEX_n}} tags in the text and a
+  codecogs-rendered PNG URL in latex_image. PENDING device re-verify.
+  (LaTeX→PNG local rendering via mathjax-node remains optional.)
 
 ## Re-test after 5d754de (before tagging r5)
 - [ ] `.testrich all` — inline image + table (V1 label), inline image
