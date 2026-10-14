@@ -17,6 +17,24 @@ extensive rich-message generation, consumption, and proto-level enhancements.
 
 ---
 
+## v0.3.18-r7 — ourin-baileys 9.0.x backports
+
+Backported from `ourin-baileys@9.0.21` (their Aug 2026 release wave):
+
+- **Status recipient targeting** — `statusJidList` / `recipientOverrides` / `specificRecipient(s)` on status sends now
+  normalize bare numbers to JIDs and *force-distribute* directly to the named recipients instead of pushing them into
+  cached group sender-key paths (where WhatsApp could silently drop them). Sender-key memory is no longer persisted for
+  status sends, matching WhatsApp Web behavior.
+- **View-once v3 + PTV anti-crash** — `viewOnceMessageV3` and `ptvMessage` added to the `normalizeMessageContent`
+  unwrap list, so the empty media stubs Meta now sends for these types no longer surface as "unsupported message".
+- **PreKey upload-and-retry** — a failed decryption whose stub carries a PreKey error now uploads 5 fresh prekeys
+  (plus a 1s settle delay) before sending the retry receipt, instead of retrying into the same dead key and
+  cascading into connection drops.
+- `MessageRetryManager` was already present (module + send cache + retry-receipt resend + auto session recreation) —
+  verified against ourin, no changes needed.
+
+Also: `recipientOverrides`/`specificRecipient(s)` flow through plain 1:1 sends' device enumeration as well.
+
 ## Rich Message System
 
 The headline feature of this fork is a complete **rich message generation and

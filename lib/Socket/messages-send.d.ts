@@ -14,6 +14,9 @@ export function makeMessagesSocket(config: any): {
         useCachedGroupMetadata: any;
         addBizAttributes: any;
         statusJidList: any;
+        recipientOverrides: any;
+        specificRecipient: any;
+        specificRecipients: any;
     }) => Promise<any>;
     sendReceipt: (jid: any, participant: any, messageIds: any, type: any) => Promise<void>;
     sendReceipts: (keys: any, type: any) => Promise<void>;

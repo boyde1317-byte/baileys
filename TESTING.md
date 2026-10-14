@@ -146,3 +146,14 @@ reachable via `primitiveStyle: 'nixcode'` in all V1 and V2 generators.
 - [ ] Inline Video + Stats (V1 label) / Inline Video+Table (V2)
 - [ ] Capture & Relay round-trip — now finds unifiedResponse.data
 - [ ] Regression: V1/V2 tables, code, links, LaTeX text-mode still render
+
+
+---
+
+# v0.3.18-r7 test additions (ourin backports)
+
+- [ ] Status with `statusJidList: ['233xxxxxxxx']` (bare number) → recipient sees the status
+- [ ] Status with `statusJidList: ['user@s.whatsapp.net']` → recipient sees the status
+- [ ] Status with no list → still broadcasts to all contacts as before
+- [ ] Receive a view-once photo + a video note (PTV) → no crash, media downloads
+- [ ] Kill the bot's prekeys (delete a session), receive a message from that contact → reconnect-free recovery, message arrives after retry
