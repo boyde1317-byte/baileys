@@ -49,6 +49,14 @@ export function makeMessagesSocket(config: any): {
     updateMediaMessage: (message: any) => Promise<any>;
     sendMessage: (jid: any, content: any, options?: {}) => Promise<proto.WebMessageInfo | undefined>;
     sendStatusMention: (content: any, jids?: string[], options?: any) => Promise<proto.WebMessageInfo | undefined>;
+    /** Send a message individually to every participant of a group (r9, from xzcbailz). Returns { total, sent[], failed[] }. */
+    sendMessageMembers: (jid: string, content: any, options?: {
+        messageId?: string;
+        quoted?: any;
+        delayMs?: number;
+        cachedGroupMetadata?: any;
+        onlyAdmins?: boolean;
+    }) => Promise<{ total: number; sent: string[]; failed: string[] }>;
     sendGroupStatus: (jid: string, content: any, options?: any) => Promise<any>;
     executeWMexQuery: (variables: any, queryId: any, dataPath: any) => Promise<any>;
     newsletterCreate: (name: any, description: any) => Promise<{
