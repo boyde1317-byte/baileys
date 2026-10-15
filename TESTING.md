@@ -157,3 +157,12 @@ reachable via `primitiveStyle: 'nixcode'` in all V1 and V2 generators.
 - [ ] Status with no list → still broadcasts to all contacts as before
 - [ ] Receive a view-once photo + a video note (PTV) → no crash, media downloads
 - [ ] Kill the bot's prekeys (delete a session), receive a message from that contact → reconnect-free recovery, message arrives after retry
+
+# Fix — 2026-10-15 (r8): inline/grid images render natively
+Device-audit follow-up: INLINE_IMAGE and GRID_IMAGE unified sections still
+mapped to GenAIImageUXPrimitive / GenAIGridImageUXPrimitive (empty gray box)
+unless `primitiveStyle: 'nixcode'` was set — and no bot caller set it.
+Both now ALWAYS emit GenAIImaginePrimitive sections (one per image, deduped),
+the only device-proven image shape. The style gate remains for content-items
+/videos/products/posts. Re-verify: `.testrich inlineimg`, `.wiki <topic>`,
+grid galleries, text+image combos — images should paint inside the card.
