@@ -1,6 +1,6 @@
 {
   "name": "baileys",
-  "version": "0.3.18-r9",
+  "version": "0.3.18-r10",
   "description": "Enhanced Baileys v7 with fixes for newsletter media uploads, plus support for interactive messages, albums, and additional message types.",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
@@ -56,8 +56,8 @@
     "better-sqlite3": "^11.0.0",
     "jimp": "^1.6.1",
     "link-preview-js": "^3.0.0",
-    "sharp": "*",
-    "mathjax-node": "^0.5.1"
+    "mathjax-node": "^0.5.1",
+    "sharp": "*"
   },
   "peerDependenciesMeta": {
     "@napi-rs/image": {
