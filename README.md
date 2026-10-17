@@ -64,7 +64,7 @@ generator for backward compatibility.
 
 > **v0.3.18-r4:** the **V1 path base64-encodes too** — both paths now share
 > one encoding helper, `encodeUnifiedResponseData(payload)`, matching the
-> convention used by NIXCODE and the 9.0.x upstream. Previously the V1 path sent
+> base64 `unifiedResponse` convention proven in the wild. Previously the V1 path sent
 > a raw JSON buffer, which can render blank on some clients.
 
 | V2 Generator | V1 Counterpart | UX Primitive |
@@ -115,7 +115,7 @@ Added 14 new native flow button types for latest WhatsApp features:
 
 | Button Type | Property | Description |
 |------------|----------|-------------|
-| `address_message` | `address` | Share address form — name matches NIXCODE 4.5 (proven); `cta_address` is not a verified name |
+| `address_message` | `address` | Share address form — `address_message` is the device-proven name; `cta_address` is not a verified name |
 | `cta_sign_in` | `signIn` | Sign-in with token |
 | `cta_sign_contract` | `signContract` | Sign contract with token |
 | `cta_complete_payment` | `completePayment` | Complete payment with token |
@@ -172,24 +172,24 @@ await sock.sendMessage(jid, { rich: true, products: shopData }); // ✅
 
 | Fix | Description |
 |-----|-------------|
-| **base64 unifiedResponse (V1+V2)** | Both paths now base64-encode `unifiedResponse.data` via shared `encodeUnifiedResponseData` — raw JSON buffers can render blank (matches NIXCODE / the 9.0.x upstream) |
+| **base64 unifiedResponse (V1+V2)** | Both paths now base64-encode `unifiedResponse.data` via shared `encodeUnifiedResponseData` — raw JSON buffers can render blank (matches the in-the-wild convention) |
 | **`code` without `language`** | Fixed `TypeError: Assignment to constant variable` (`language ||=` on a destructured const) |
 | **LaTeX text dropped** | `text`/`contentText` were never passed through — `latexMetadata.text` was always `undefined` |
 | **Quoted/reply support** | `prepareRichResponseMessage` now honors `quoted` on the content object |
 | **Donation citation fallbacks** | Removed hardcoded `For Donation via Saweria` / `Donation` defaults in `links` citations |
-| **Ragged table rows** | Rows are padded to equal width (NIXCODE / upstream behavior) — uneven rows render blank cells |
+| **Ragged table rows** | Rows are padded to equal width (in-the-wild behavior) — uneven rows render blank cells |
 | **One AI bot JID** | Single `AI_BOT_JID` constant shared by the V1/V2 context builders |
 | **Button mapper dedup** | The ~350-line button mapping that existed twice (`prepareNativeFlowButtons` + legacy `buttons` path) is now one shared `mapButtonToNativeFlow` (−427 lines); both paths stay in sync automatically |
 | **Experimental CTA gating** | Unverified CTAs require explicit opt-in (`experimentalCta` / `experimental`) |
 | **Generic key routing** | `items`/`posts`/`products`/`suggested` only route to the rich builder with `rich: true` |
 | **`sendGroupStatus` statusSourceType** | Was checked at the wrong nesting level — never matched, so `statusSourceType` was never set |
-| **`address` CTA name** | `button.address` now emits `address_message` (NIXCODE 4.5's proven name) instead of the unverified `cta_address` — moved out of the experimental set |
-| **`tip` metadata text** | New `tip` key (top-level or `richResponse` entry) renders as `GenAIMetadataTextPrimitive` (NIXCODE's `addTip`) — closes the last gap in the proven rich-response combo |
-| **`cta_cancel_reminder` button** | Was in the verified list but no mapper branch could ever emit it — new `cancelReminder` button property (params mirror NIXCODE's `addCancelReminder`) |
-| **`suggested` → suggestion pills** | `suggested` now renders as `GenAIFollowUpSuggestionPillPrimitive` pills in a `GenAIActionRowLayoutViewModel` (NIXCODE's `addSuggest`) instead of plain markdown text |
-| **`sources` key** | New `sources` key (top-level or `richResponse` entry) renders the sources strip as `GenAISearchResultPrimitive` (NIXCODE's `addSource`) — accepts NIXCODE's string-array groups or `{ profileUrl, url, title }` objects |
-| **`primitiveStyle: 'nixcode'`** | Opt-in switch that emits NIXCODE 4.5's exact V2 primitives — `GenAIImaginePrimitive` (IMAGE/ANIMATE), `GenAIProductItemCardPrimitive`, `GenAIPostPrimitive` — instead of the liaaa-family primitives. V1 submessages are unchanged, so V1 fallbacks stay intact |
-| **`gridImage` bare arrays** | A bare string array (`{ gridImage: [url, ...] }`) now means `[main, ...others]`, matching NIXCODE's `addImage` |
+| **`address` CTA name** | `button.address` now emits `address_message` (the device-proven name) instead of the unverified `cta_address` — moved out of the experimental set |
+| **`tip` metadata text** | New `tip` key (top-level or `richResponse` entry) renders as `GenAIMetadataTextPrimitive` — closes the last gap in the proven rich-response combo |
+| **`cta_cancel_reminder` button** | Was in the verified list but no mapper branch could ever emit it — new `cancelReminder` button property (params mirror the reminder CTA) |
+| **`suggested` → suggestion pills** | `suggested` now renders as `GenAIFollowUpSuggestionPillPrimitive` pills in a `GenAIActionRowLayoutViewModel` instead of plain markdown text |
+| **`sources` key** | New `sources` key (top-level or `richResponse` entry) renders the sources strip as `GenAISearchResultPrimitive` — accepts string-array groups or `{ profileUrl, url, title }` objects |
+| **`primitiveStyle: 'native'`** | Opt-in switch that emits the device-proven native V2 primitives — `GenAIImaginePrimitive` (IMAGE/ANIMATE), `GenAIProductItemCardPrimitive`, `GenAIPostPrimitive` — instead of the default UX primitives. V1 submessages are unchanged, so V1 fallbacks stay intact |
+| **`gridImage` bare arrays** | A bare string array (`{ gridImage: [url, ...] }`) now means `[main, ...others]`, matching the first-image-is-main convention |
 
 ### Structured Metadata Types
 
@@ -224,7 +224,7 @@ const content = generateLatexImageContent({
 
 ### Tip / Metadata Text (GenAIMetadataTextPrimitive)
 
-The small hint line under rich content (NIXCODE's `addTip`) — available as a
+The small hint line under rich content — available as a
 top-level `tip` key or a `richResponse` entry. It renders as
 `GenAIMetadataTextPrimitive` in the V2 layout, not as regular markdown text:
 
@@ -242,26 +242,26 @@ await sock.sendMessage(jid, {
 });
 ```
 
-### primitiveStyle: 'nixcode'
+### primitiveStyle: 'native'
 
-By default the fork emits the liaaa-family V2 primitives
+By default the fork emits the UX-family V2 primitives
 (`GenAIGridImageUXPrimitive`, `GenAIContentItemsUXPrimitive`, …) — the
-proven path. Setting `primitiveStyle: 'nixcode'` switches section
-generation to NIXCODE 4.5's exact shapes:
+widely-deployed path. Setting `primitiveStyle: 'native'` switches section
+generation to the device-proven imagine primitives:
 
-| content | default (liaaa) | nixcode |
+| content | default | native |
 |---|---|---|
 | `gridImage` | `GenAIGridImageUXPrimitive` | one `GenAIImaginePrimitive` (IMAGE) section per image |
 | `inlineVideo` | `GenAIContentItemsUXPrimitive` (reel item) | `GenAIImaginePrimitive` (ANIMATE, with `duration`) |
-| `products` | `GenAIContentItemsUXPrimitive` (reel item) | `GenAIProductItemCardPrimitive` (Single/HScroll like NIXCODE `addProduct`) |
-| `posts` | `GenAIContentItemsUXPrimitive` (reel item) | `GenAIPostPrimitive` (HScroll like NIXCODE `addPost`) |
+| `products` | `GenAIContentItemsUXPrimitive` (reel item) | `GenAIProductItemCardPrimitive` (Single/HScroll) |
+| `posts` | `GenAIContentItemsUXPrimitive` (reel item) | `GenAIPostPrimitive` (HScroll) |
 
 Notes:
 - Only the V2 unified sections change — the V1 submessages are untouched,
-  so clients that ignore V2 keep working (NIXCODE instead sends
-  placeholder text like `[ CANNOT_LOAD_VIDEO - NIXEL ]` as the V1
-  submessage; the fork keeps real content there).
-- `normalizeProductCards` / `normalizePostCards` accept both NIXCODE field
+  so clients that ignore V2 keep working (other builders send placeholder
+  text like `[ CANNOT_LOAD_VIDEO - NIXEL ]` as the V1 submessage; the
+  fork keeps real content there).
+- `normalizeProductCards` / `normalizePostCards` accept both upstream field
   names (`product_url`, `sale_price`, `likes_count`, …) and the fork's.
 - Intended for A/B device testing: whichever style renders best becomes
   the default for the next tag.
@@ -270,23 +270,22 @@ Notes:
 
 Judged against what actually ships in the wild, not what merely compiles.
 
-**Proven native flow CTAs** (NIXCODE emits these, clients render them):
+**Proven native flow CTAs** (clients render these in the wild):
 `quick_reply`, `cta_url`, `cta_copy`, `cta_call`, `single_select`,
 `cta_reminder`, `cta_cancel_reminder`, `send_location`, `address_message`,
 `flow` (official WhatsApp Flows API). All wrapped in the `native_flow`
 tag `name: 'mixed'` v9 envelope.
 
-**Proven V2 GenAI primitives** (NIXCODE 4.5 surface): markdown text (with
+**Proven V2 GenAI primitives** (V2 surface): markdown text (with
 inline hyperlink/citation/LaTeX items), code block, table, sources row, grid
 image, video/reel, product card, post, metadata text (tip), follow-up
 suggestion pills. The fork now emits every one of these. For grid image /
-video / product / post the fork defaults to the liaaa-family primitives
-(`GenAIGridImageUXPrimitive`, `GenAIContentItemsUXPrimitive`); NIXCODE uses
-`GenAIImaginePrimitive` (IMAGE for `addImage`, ANIMATE for `addVideo`) /
-`GenAIReelPrimitive` (`addReels`) / `GenAIProductItemCardPrimitive` /
-`GenAIPostPrimitive`. Same submessage types, both families render in the
-wild — and `primitiveStyle: 'nixcode'` lets you emit NIXCODE's exact shapes
-for A/B testing.
+video / product / post the fork defaults to the UX-family primitives
+(`GenAIGridImageUXPrimitive`, `GenAIContentItemsUXPrimitive`); the native
+style uses `GenAIImaginePrimitive` (IMAGE / ANIMATE) /
+`GenAIProductItemCardPrimitive` / `GenAIPostPrimitive`. Same submessage
+types, both families render in the wild — and `primitiveStyle: 'native'`
+lets you emit the native shapes for A/B testing.
 
 **Proven V1 submessages** (in-the-wild evidence — TEXT, CODE,
 TABLE, LATEX, GRID_IMAGE, CONTENT_ITEMS strongest; INLINE_IMAGE, DYNAMIC,

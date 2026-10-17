@@ -23,29 +23,29 @@ confirm the bubble **renders instead of showing blank**:
 - [ ] `map`
 - [ ] V2 spot-checks: `generateTableContentV2`, `generateReelContentV2`
 
-## 1b. The proven Moonson combo (facebook.js card)
+## 1b. The proven rich-response combo
 
 - [ ] `gridImage` + `inlineVideo` + `text` + `tip` + `footerText` + `quoted`
       in one message — image gallery, tappable video, markdown, small hint
       line under the content, footer, reply preview
 
-## 1c. NIXCODE-parity extras
+## 1c. Native-parity extras
 
 - [ ] `sources` entry → sources strip renders (favicon + name, tappable)
 - [ ] `suggested` entry → tappable follow-up **pills**, not a plain text list
 - [ ] `cancelReminder` button → renders as a Cancel Reminder CTA
 
-## 1d. primitiveStyle A/B (nixcode vs default)
+## 1d. primitiveStyle A/B (native vs default)
 
-Send the same card twice — once with `primitiveStyle: 'nixcode'`, once
+Send the same card twice — once with `primitiveStyle: 'native'`, once
 without — and compare on the same device:
 
-- [ ] `gridImage` (nixcode): each image renders from its own
+- [ ] `gridImage` (native): each image renders from its own
       `GenAIImaginePrimitive` section
-- [ ] `inlineVideo` (nixcode): video plays inline via the ANIMATE section
+- [ ] `inlineVideo` (native): video plays inline via the ANIMATE section
       (pass `duration`)
-- [ ] `products` (nixcode): product card with brand/price
-- [ ] `posts` (nixcode): post card with username/likes/comments
+- [ ] `products` (native): product card with brand/price
+- [ ] `posts` (native): post card with username/likes/comments
 - [ ] Whichever style renders best on device becomes the default before
       the next tag
 
@@ -115,19 +115,19 @@ inline video, maps. Both V1 and V2.
 **Root causes:** (1) V1 generators never embedded `unifiedResponse.data`
 — clients require view models for media (and `captureUnifiedResponse`
 returned null on generator-built messages). (2) V2 embedded only
-liaaa-family UX primitives (`GenAIImageUX`, `GenAIGridImageUX`,
+UX-family primitives (`GenAIImageUX`, `GenAIGridImageUX`,
 `GenAIContentItemsUX`, `GenAIDynamicUX`) — none render from bots. The
-device-proven shape is NIXCODE/Moonson's `GenAIImaginePrimitive`, now
-reachable via `primitiveStyle: 'nixcode'` in all V1 and V2 generators.
+device-proven shape is `GenAIImaginePrimitive`, now
+reachable via `primitiveStyle: 'native'` in all V1 and V2 generators.
 
 ## Experimental ⚠️
 - **Maps** — FIXED 2026-09-14: no proven GenAIMapUXPrimitive exists
-  (Moonson/NIXCODE ship no map card; it painted caption-only). Maps now
+  (the map card ships nowhere else in the wild; it painted caption-only). Maps now
   render as a static OSM tile (GenAIImaginePrimitive — proven) + a
   markdown info section with annotation details + OSM attribution.
   Tile zoom 16, centered on the first annotation. PENDING device re-verify.
 - **LaTeX** — FIXED 2026-09-14: the standalone GenAILatexUXPrimitive
-  painted caption-only. LaTeX now uses the proven NIXCODE anatomy:
+  painted caption-only. LaTeX now uses the proven inline-entities anatomy:
   GenAILatexItem INLINE ENTITIES inside a GenAIMarkdownTextUXPrimitive,
   with {{NIXEL_LATEX_n}}expr{{/NIXEL_LATEX_n}} tags in the text and a
   codecogs-rendered PNG URL in latex_image. PENDING device re-verify.
@@ -150,7 +150,7 @@ reachable via `primitiveStyle: 'nixcode'` in all V1 and V2 generators.
 
 ---
 
-# v0.3.18-r7 test additions (ourin backports)
+# v0.3.18-r7 test additions (9.0.x backports)
 
 - [ ] Status with `statusJidList: ['233xxxxxxxx']` (bare number) → recipient sees the status
 - [ ] Status with `statusJidList: ['user@s.whatsapp.net']` → recipient sees the status
@@ -161,7 +161,7 @@ reachable via `primitiveStyle: 'nixcode'` in all V1 and V2 generators.
 # Fix — 2026-10-15 (r8): inline/grid images render natively
 Device-audit follow-up: INLINE_IMAGE and GRID_IMAGE unified sections still
 mapped to GenAIImageUXPrimitive / GenAIGridImageUXPrimitive (empty gray box)
-unless `primitiveStyle: 'nixcode'` was set — and no bot caller set it.
+unless `primitiveStyle: 'native'` was set — and no bot caller set it.
 Both now ALWAYS emit GenAIImaginePrimitive sections (one per image, deduped),
 the only device-proven image shape. The style gate remains for content-items
 /videos/products/posts. Re-verify: `.testrich inlineimg`, `.wiki <topic>`,
