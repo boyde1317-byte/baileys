@@ -1,6 +1,6 @@
 {
   "name": "baileys",
-  "version": "0.3.18-r12",
+  "version": "0.3.18-r13",
   "description": "Enhanced Baileys v7 with fixes for newsletter media uploads, plus support for interactive messages, albums, and additional message types.",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
@@ -110,5 +110,8 @@
     "tmp": "^0.2.5",
     "underscore": "^1.13.8",
     "yaml@npm:^2.6.1": "^2.8.4"
+  },
+  "optionalDependencies": {
+    "@roamhq/wrtc": "^0.10.0"
   }
 }
