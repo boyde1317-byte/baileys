@@ -11,15 +11,14 @@
 
 ## About
 
-This is the Baileys fork used internally by **NEXORA-MD**. It is based on
-[itsliaaa/Baileys](https://github.com/itsliaaa/Baileys) @ `0.3.18-final` with
-extensive rich-message generation, consumption, and proto-level enhancements.
+This is the Baileys fork used internally by **NEXORA-MD**, with extensive
+rich-message generation, consumption, and proto-level enhancements.
 
 ---
 
-## v0.3.18-r7 — ourin-baileys 9.0.x backports
+## v0.3.18-r7 — 9.0.x rich-response backports
 
-Backported from `ourin-baileys@9.0.21` (their Aug 2026 release wave):
+Backported from the `9.0.21` upstream release wave (Aug 2026):
 
 - **Status recipient targeting** — `statusJidList` / `recipientOverrides` / `specificRecipient(s)` on status sends now
   normalize bare numbers to JIDs and *force-distribute* directly to the named recipients instead of pushing them into
@@ -31,7 +30,7 @@ Backported from `ourin-baileys@9.0.21` (their Aug 2026 release wave):
   (plus a 1s settle delay) before sending the retry receipt, instead of retrying into the same dead key and
   cascading into connection drops.
 - `MessageRetryManager` was already present (module + send cache + retry-receipt resend + auto session recreation) —
-  verified against ourin, no changes needed.
+  verified against the 9.0.x upstream, no changes needed.
 
 Also: `recipientOverrides`/`specificRecipient(s)` flow through plain 1:1 sends' device enumeration as well.
 
@@ -65,7 +64,7 @@ generator for backward compatibility.
 
 > **v0.3.18-r4:** the **V1 path base64-encodes too** — both paths now share
 > one encoding helper, `encodeUnifiedResponseData(payload)`, matching the
-> convention used by NIXCODE and `ourin-baileys`. Previously the V1 path sent
+> convention used by NIXCODE and the 9.0.x upstream. Previously the V1 path sent
 > a raw JSON buffer, which can render blank on some clients.
 
 | V2 Generator | V1 Counterpart | UX Primitive |
@@ -173,19 +172,19 @@ await sock.sendMessage(jid, { rich: true, products: shopData }); // ✅
 
 | Fix | Description |
 |-----|-------------|
-| **base64 unifiedResponse (V1+V2)** | Both paths now base64-encode `unifiedResponse.data` via shared `encodeUnifiedResponseData` — raw JSON buffers can render blank (matches NIXCODE / ourin-baileys) |
+| **base64 unifiedResponse (V1+V2)** | Both paths now base64-encode `unifiedResponse.data` via shared `encodeUnifiedResponseData` — raw JSON buffers can render blank (matches NIXCODE / the 9.0.x upstream) |
 | **`code` without `language`** | Fixed `TypeError: Assignment to constant variable` (`language ||=` on a destructured const) |
 | **LaTeX text dropped** | `text`/`contentText` were never passed through — `latexMetadata.text` was always `undefined` |
 | **Quoted/reply support** | `prepareRichResponseMessage` now honors `quoted` on the content object |
 | **Donation citation fallbacks** | Removed hardcoded `For Donation via Saweria` / `Donation` defaults in `links` citations |
-| **Ragged table rows** | Rows are padded to equal width (NIXCODE / ourin-baileys behavior) — uneven rows render blank cells |
+| **Ragged table rows** | Rows are padded to equal width (NIXCODE / upstream behavior) — uneven rows render blank cells |
 | **One AI bot JID** | Single `AI_BOT_JID` constant shared by the V1/V2 context builders |
 | **Button mapper dedup** | The ~350-line button mapping that existed twice (`prepareNativeFlowButtons` + legacy `buttons` path) is now one shared `mapButtonToNativeFlow` (−427 lines); both paths stay in sync automatically |
 | **Experimental CTA gating** | Unverified CTAs require explicit opt-in (`experimentalCta` / `experimental`) |
 | **Generic key routing** | `items`/`posts`/`products`/`suggested` only route to the rich builder with `rich: true` |
 | **`sendGroupStatus` statusSourceType** | Was checked at the wrong nesting level — never matched, so `statusSourceType` was never set |
 | **`address` CTA name** | `button.address` now emits `address_message` (NIXCODE 4.5's proven name) instead of the unverified `cta_address` — moved out of the experimental set |
-| **`tip` metadata text** | New `tip` key (top-level or `richResponse` entry) renders as `GenAIMetadataTextPrimitive` (NIXCODE's `addTip`) — closes the last gap in the proven Moonson facebook.js combo |
+| **`tip` metadata text** | New `tip` key (top-level or `richResponse` entry) renders as `GenAIMetadataTextPrimitive` (NIXCODE's `addTip`) — closes the last gap in the proven rich-response combo |
 | **`cta_cancel_reminder` button** | Was in the verified list but no mapper branch could ever emit it — new `cancelReminder` button property (params mirror NIXCODE's `addCancelReminder`) |
 | **`suggested` → suggestion pills** | `suggested` now renders as `GenAIFollowUpSuggestionPillPrimitive` pills in a `GenAIActionRowLayoutViewModel` (NIXCODE's `addSuggest`) instead of plain markdown text |
 | **`sources` key** | New `sources` key (top-level or `richResponse` entry) renders the sources strip as `GenAISearchResultPrimitive` (NIXCODE's `addSource`) — accepts NIXCODE's string-array groups or `{ profileUrl, url, title }` objects |
@@ -230,7 +229,7 @@ top-level `tip` key or a `richResponse` entry. It renders as
 `GenAIMetadataTextPrimitive` in the V2 layout, not as regular markdown text:
 
 ```js
-// The proven Moonson facebook.js combo, in fork API:
+// The proven rich-response combo, in fork API:
 await sock.sendMessage(jid, {
   richResponse: [
     { gridImage: 'https://example.com/thumb.jpg' },
@@ -238,7 +237,7 @@ await sock.sendMessage(jid, {
     { text: '» Title: Facebook Video\n» Link: https://example.com' },
     { tip: 'Tap the video to play' },
   ],
-  footerText: '© Moonson Aizen',
+  footerText: '© NEXORA',
   quoted: repliedMessage,
 });
 ```
@@ -269,9 +268,7 @@ Notes:
 
 ### Proven vs Experimental Reference
 
-Judged against what actually ships in the wild — **Moonson** (production
-usage), **NIXCODE 4.5** (builder surface), and **itsliaaa/Baileys**
-(library support) — not what merely compiles.
+Judged against what actually ships in the wild, not what merely compiles.
 
 **Proven native flow CTAs** (NIXCODE emits these, clients render them):
 `quick_reply`, `cta_url`, `cta_copy`, `cta_call`, `single_select`,
@@ -291,7 +288,7 @@ video / product / post the fork defaults to the liaaa-family primitives
 wild — and `primitiveStyle: 'nixcode'` lets you emit NIXCODE's exact shapes
 for A/B testing.
 
-**Proven V1 submessages** (itsliaaa support + ecosystem usage — TEXT, CODE,
+**Proven V1 submessages** (in-the-wild evidence — TEXT, CODE,
 TABLE, LATEX, GRID_IMAGE, CONTENT_ITEMS strongest; INLINE_IMAGE, DYNAMIC,
 MAP supported but with thinner in-the-wild evidence).
 
@@ -418,7 +415,7 @@ The barrel (`src/index.ts`) exports **349 symbols** total.
 | **Button text aliases** | All button types accept `display_text` and `label` as aliases for `text` / `buttonText`. |
 | **Rich table improvements** | `title \|\| headerText` fallback, non-array item wrapping, `richResponse` array row normalization. |
 
-### Inherited from `itsliaaa/Baileys 0.3.18-final`:
+### Inherited from upstream:
 
 - ✅ Newsletter media upload fix
 - ✅ Interactive message support (`interactiveMessage`, `nativeFlowMessage`)
@@ -563,13 +560,3 @@ node scripts/patch-libsignal.js
 ```
 
 NEXORA-MD runs this automatically via the `postinstall` hook.
-
----
-
-## Upstream
-
-Based on [itsliaaa/Baileys](https://github.com/itsliaaa/Baileys) which is itself
-a fork of the original [WhiskeySockets/Baileys](https://github.com/WhiskeySockets/Baileys).
-The V2 rich message generators are ported from `ourin-baileys` (npm), and the
-base64 `unifiedResponse` convention and table normalization follow NIXCODE.
-Rich message utilities retain their original attribution notes.
