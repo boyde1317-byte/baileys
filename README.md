@@ -322,6 +322,39 @@ prepareRichResponseMessage({ richResponse: [{ messageType: 2, messageText: 'ok' 
 
 ---
 
+## Number Ban Status Check (v0.3.18-r18)
+
+`sock.checkBanStatus(...numbers)` reports whether numbers still resolve on
+WhatsApp — the practical ban check for numbers you are not logged in as. Every
+number is batched into a single usync request, and one entry comes back per
+number, in the order you passed them:
+
+```js
+await sock.checkBanStatus('+2348012345678', '234 801 234 5679');
+// [
+//   { jid: '2348012345678@s.whatsapp.net', exists: true,  banned: false },
+//   { jid: '2348012345679@s.whatsapp.net', exists: false, banned: true  }
+// ]
+```
+
+Input formatting is free — `+`-prefixed, spaced, `@s.whatsapp.net`, or carrying
+a device suffix all normalize to the same verdict. LIDs cannot be checked by
+phone and are skipped with a warning. A query that fails **throws**, so a
+transport problem is never reported as "banned".
+
+**Read `exists: false` correctly.** WhatsApp exposes no ban flag for somebody
+else's account: a banned number is deregistered, so it stops resolving in
+exactly the same way as a deleted or a never-registered one. `exists: false`
+therefore means "does not resolve on WhatsApp" — banned, deleted, or never
+registered. That is the same signal `onWhatsApp` returns, reported per number
+with the ban framing. Checking your own number must come back `exists: true`;
+use that as the sanity check.
+
+`npm test` covers number normalization and the verdict mapping offline, with no
+account needed. `TESTING.md` lists the live checks that need a paired session.
+
+---
+
 ## Exported API
 
 All standard Baileys exports plus the following fork-specific additions:
