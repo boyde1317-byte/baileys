@@ -166,3 +166,12 @@ Both now ALWAYS emit GenAIImaginePrimitive sections (one per image, deduped),
 the only device-proven image shape. The style gate remains for content-items
 /videos/products/posts. Re-verify: `.testrich inlineimg`, `.wiki <topic>`,
 grid galleries, text+image combos — images should paint inside the card.
+
+# v0.3.18-r18 additions (checkBanStatus)
+
+Number normalization and the verdict mapping are covered offline by `npm test`
+(no account needed). The verdict itself only exists against the live server:
+
+- [ ] Paired session, `await sock.checkBanStatus('<your own number>')` → `exists: true, banned: false`
+- [ ] A number you know is not on WhatsApp → `exists: false, banned: true`
+- [ ] Several numbers in one call → one entry per number, a single usync request on the wire
