@@ -1,6 +1,6 @@
 {
   "name": "baileys",
-  "version": "0.3.18-r18",
+  "version": "0.3.18-r19",
   "description": "Enhanced Baileys v7 with a rich message layer: native-flow buttons, AI rich responses, and self-hosted A2UI surfaces sent through InteractiveMessage.bloksWidget.",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
@@ -26,6 +26,8 @@
     "bot",
     "interactive-messages",
     "a2ui",
+    "genai",
+    "rich-response",
     "js-whatsapp",
     "multi-device",
     "whatsapp",

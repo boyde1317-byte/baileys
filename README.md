@@ -1,15 +1,16 @@
 # baileys — boyde1317-byte fork
 
 Baileys 0.3.18 (multi-device WhatsApp Web) plus a rich message layer: interactive cards,
-native-flow buttons, AI rich responses, and self-hosted A2UI surfaces that render natively
-in WhatsApp without a Meta Flow behind them.
+native-flow buttons, GenAI rich cards, in-chat HTML, and self-hosted A2UI surfaces that
+render natively in WhatsApp without a Meta Flow behind them. A device audit kit for all of
+it ships in the package.
 
-**Version:** `0.3.18-r18` · **Module:** ESM only, Node >= 20 · **License:** MIT
+**Version:** `0.3.18-r19` · **Module:** ESM only, Node >= 20 · **License:** MIT
 
 Install from GitHub (pin a tag, not `main`):
 
 ```bash
-npm install github:boyde1317-byte/baileys#v0.3.18-r18
+npm install github:boyde1317-byte/baileys#v0.3.18-r19
 ```
 
 ```js
@@ -240,6 +241,54 @@ Meta AI format and take the compact table string form (`[title, 'a|b', '1|Tea;;2
 `captureUnifiedResponse(msg)` + `generateUnifiedResponseContent(quoted, captured)` round-trip an
 existing rich message.
 
+### GenAI cards — `genai-utils`
+
+The `richResponse` path above builds the card for you from submessage keys. When you want
+the envelope itself — sections, primitives, proof chain, disclaimer — use `genai-utils`. It
+returns content you can relay, or relays it for you.
+
+```js
+import { sendUnifiedRich, singleSection, markdownText, hScrollSection, productItemCard,
+         extWidget, followUpPills } from 'baileys';
+
+await sendUnifiedRich(sock, jid, {
+  disclaimer: 'Stats',                                  // small badge on the card
+  submessages: [{ messageType: 2, messageText: 'Status' }],
+  sections: [
+    singleSection(productItemCard({ title: 'Online', brand: 'Bot', price: '42 ms', imageUrl: 'https://picsum.photos/600' })),
+    singleSection(markdownText('**up** since 04:12', [{ url: 'https://example.com', title: 'status page' }])),
+    hScrollSection([extWidget({ title: 'Actions', ctas: [{ label: 'Menu', toast: 'Menu' }] }), ...followUpPills(['.ping', '.help'])])
+  ],
+  quoted
+});
+```
+
+Primitives: `productItemCard`, `markdownText` (with citation chips), `extWidget` (CTA rows,
+toast-only taps), `followUpPills`, `imaginePrimitive`, `htmlPrimitive`, `rawPrimitive`.
+Layouts: `singleSection`, `hScrollSection`, `layout(name, data)`, `section(view_model)`.
+
+Presets:
+
+```js
+import { vipCard, sendVipCard, sendHtmlCard, buildSecretFlowContent } from 'baileys';
+
+await sendVipCard(sock, jid, {           // product banner + text + CTA carousel + link
+  title: 'Pro', brand: 'Bot', price: '✅ Active', imageUrl, body: '**thanks** for subscribing'
+});
+
+await sendHtmlCard(sock, jid, {          // in-chat HTML document, rendered in the webview
+  html: '<html><body><h1>hi</h1></body></html>', title: 'Demo'
+});
+```
+
+`buildUnifiedRichContent(options)` gives you the content object without sending, and
+`buildSecretFlowContent(content)` wraps it in `viewOnceMessage` so the card opens once.
+
+Proof chains: `PROOF_CHAINS.omegatech` (default, 161-byte signature) and
+`PROOF_CHAINS.nixcode` (`sendHtmlCard` uses it). Both are harvested from cards that render on
+device; random bytes get the card masked instead of rendered. Pass `withProofs: false` to send
+none, or `setProofChains({ mine: { signature, certificateChain } })` to supply your own.
+
 ### Carousels, products, misc
 
 ```js
@@ -257,6 +306,71 @@ await sock.sendMessage(jid, { pin: { type: 1, time: 86400, key: sent.key } });
 
 Product and shop cards go through `productHeader` (a product message as the interactive
 header), `products`, `catalog`, and `orderText`; see `messages.js` for the field lists.
+
+### Fluent builder — `AiRich`
+
+Chain primitives into one card, then send. Same envelope as `genai-utils`, plus markdown link
+extraction, tables and code blocks.
+
+```js
+import { AiRich } from 'baileys';
+
+await new AiRich(sock)
+  .addProduct({ title: 'Ping', brand: 'Host', price: '42 ms', image_url, icon_url })
+  .addText('## Latency\n\n> API : **42 ms** — [status](https://example.com)')
+  .addTable([['host', 'ms'], ['api', '42']])
+  .addTip('linux x64 · Node 22')
+  .addSuggest(['.menu', '.ping'])
+  .setFooter('built with baileys')
+  .send(jid, { quoted });
+```
+
+Also `addCode(code, lang)`, `addImage(url)`, `addVideo('url|5')`, `addCarousel(primitives)`,
+`addPrimitive(anyPrimitive)`, `addLayout(name, data)`, `setDisclaimer`, `setContextInfo`, and
+`build()` when you want the content object to relay yourself.
+
+### Card images that actually show — `rich-media-utils`
+
+Rich cards reference images by URL and the client has to fetch them, which it often does not
+(empty image slot in a perfect card). Two opt-out fixes:
+
+```js
+import { rehostRichCardMedia, hoistAfterRelay, extractProtoImageUrls } from 'baileys';
+
+await rehostRichCardMedia(sock, content);              // before relay: move images onto WA's CDN
+const message = await generateWAMessageFromContent(jid, content, { userJid: sock.user.id });
+await sock.relayMessage(jid, message.message, { messageId: message.key.id });
+hoistAfterRelay(sock, jid, message.message);           // after relay: also send them as photos
+```
+
+Rehosting is the primary fix (`REHOST_RICH_MEDIA=0` disables). Hoisting is the fallback
+(`RICH_MEDIA_HOIST=0` disables) and re-encodes with `sharp` when it is installed. Both are
+safe to call on every rich message: no images means no work, and they never throw.
+
+### Device audit kit — `rich-test-kit`
+
+54 callable tests, one per message type this package can build. Each one sends a real message
+through the socket you pass in, so wiring an owner command is the whole integration:
+
+```js
+import { RICH_TESTS, runRichTest, runAllRichTests } from 'baileys';
+
+await runRichTest(sock, jid, 'vipcard');        // one type, by id
+await runAllRichTests(sock, jid, quoted);       // every type, spaced 500 ms apart
+RICH_TESTS.map(t => `${t.group}/${t.id}: ${t.label}`);  // the catalogue
+```
+
+Groups: V1 and V2 generators, links, reels, location, images, grid/dynamic, LaTeX images, all
+the V1/V2 combinations, `galaxy`, `carousel`, `secret`, `html*`, `vipcard`, `blokssurface`,
+and the `AiRich` combos (`msping`, `msfb`). Photo/video URLs point at placeholders, and the
+HTML tests ship their own inline documents rather than vendored payloads.
+
+Every test encodes offline against a stub socket too, which is how this list stays honest:
+
+```js
+// no socket, no phone: prove a type builds
+const content = new AiRich(sock).addText('hi').build();
+```
 
 ## Receiving
 
@@ -301,4 +415,7 @@ that use them.
 
 Fork of [WhiskeySockets/Baileys](https://github.com/WhiskeySockets/Baileys). The rich message
 layer builds on work by Lia (elaiana), whose note in `lib/Utils/rich-message-utils.js` must be
-kept. MIT licensed.
+kept. The GenAI envelope follows cards harvested from the Omegatech and Moongod/Paxley bots;
+the audit kit comes from the NEXORA-MD harness. The NIXCODE `AIRich` chain is not vendored
+here — `ai-rich-builder.js` re-implements the same wire shape, because that library's licence
+forbids standalone redistribution. MIT licensed.
