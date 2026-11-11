@@ -1,7 +1,7 @@
 {
   "name": "baileys",
-  "version": "0.3.18-r17",
-  "description": "Enhanced Baileys v7 with fixes for newsletter media uploads, plus support for interactive messages, albums, and additional message types.",
+  "version": "0.3.18-r18",
+  "description": "Enhanced Baileys v7 with a rich message layer: native-flow buttons, AI rich responses, and self-hosted A2UI surfaces sent through InteractiveMessage.bloksWidget.",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
   "type": "module",
@@ -25,6 +25,7 @@
     "baileys",
     "bot",
     "interactive-messages",
+    "a2ui",
     "js-whatsapp",
     "multi-device",
     "whatsapp",
