@@ -5,12 +5,12 @@ native-flow buttons, GenAI rich cards, in-chat HTML, and self-hosted A2UI surfac
 render natively in WhatsApp without a Meta Flow behind them. A device audit kit for all of
 it ships in the package.
 
-**Version:** `0.3.18-r19` · **Module:** ESM only, Node >= 20 · **License:** MIT
+**Version:** `0.3.18-r20` · **Module:** ESM only, Node >= 20 · **License:** MIT
 
 Install from GitHub (pin a tag, not `main`):
 
 ```bash
-npm install github:boyde1317-byte/baileys#v0.3.18-r19
+npm install github:boyde1317-byte/baileys#v0.3.18-r20
 ```
 
 ```js
@@ -371,6 +371,47 @@ Every test encodes offline against a stub socket too, which is how this list sta
 // no socket, no phone: prove a type builds
 const content = new AiRich(sock).addText('hi').build();
 ```
+
+### Fake quotes, ad replies, status — `wa-utils`
+
+Three presentation tricks, all proto-only: a message can look like it came from WhatsApp or
+from a real AI account, wear a branded banner card, or be posted as a status.
+
+```js
+import { replyFakeQuote, replyAdReply, sendStatus, buildFakeOrderQuote } from 'baileys';
+
+// green reply bar attributed to an AI account
+await replyFakeQuote(m, sock, 'bot is back', 'WhatsApp');
+
+// branded banner card above the text
+await replyAdReply(m, sock, 'type .menu', {
+  title: 'Bot', body: '54 commands · online', thumbnailUrl: 'https://picsum.photos/600',
+  sourceUrl: 'https://example.com', renderLargerThumbnail: true
+});
+
+// status broadcast
+await sendStatus(sock, 'text', 'maintenance tonight', { backgroundColor: '#128C7E' });
+await sendStatus(sock, 'image', 'https://picsum.photos/900', { caption: 'new build', statusJidList: [jid] });
+```
+
+Quote builders, all returning something to pass as `{ quoted }`: `buildFakeOrderQuote`,
+`buildFakeContactQuote`, `buildFakeAudioQuote`, `buildFakeLocationQuote`,
+`buildFakeLiveLocationQuote`, `buildFakeTextQuote`, `buildFakeDocumentQuote`,
+`buildFakeImageQuote`, `buildFakeGifQuote`, `buildFakeProductQuote`,
+`buildFakeGroupInviteQuote`, `buildFakePaymentQuote`, `buildFakeNewsletterQuote`,
+`buildRandomFakeQuote`. The chosen builder decides what the reply bar renders: a catalog card,
+a contact card, a payment request, a group invite, and so on.
+
+What makes it render, learned the hard way:
+
+- `contextInfo.stanzaId` must be a non-empty stanza-shaped id (`3EB0…`) or clients degrade the
+  bar to plain text.
+- `contextInfo.remoteJid` must be the real destination chat, not `0@s.whatsapp.net`.
+- A status-quote author resolves among real status senders, so `participant: 0@s.whatsapp.net`
+  gives the WhatsApp look; for a named AI, the identity has to live in the contact card's
+  vcard `waid` (`buildFakeContactQuote` does that, rotating `AI_JIDS`).
+- `buildAdReplyContext(ad)` returns just the `contextInfo` fragment, so the same banner can sit
+  on an interactive message that also carries native-flow buttons.
 
 ## Receiving
 
