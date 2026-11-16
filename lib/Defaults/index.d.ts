@@ -141,4 +141,15 @@ import { proto } from '../../WAProto/index.js';
 declare const version: number[];
 import { makeLibSignalRepository } from '../Signal/libsignal.js';
 export {};
-//# sourceMappingURL=index.d.ts.map
+//# sourceMappingURL=index.d.ts.mapexport declare const WA_VERSION: string;
+export declare const WA_VERSION_HASH: string;
+export declare const MOBILE_TOKEN: Buffer;
+export declare const MOBILE_REGISTRATION_ENDPOINT: string;
+export declare const MOBILE_USERAGENT: string;
+export declare const GRAPHQL_ENDPOINT: string;
+export declare const GRAPHQL_ACCESS_TOKEN: string;
+export declare const GRAPHQL_BAN_STATUS_DOC_ID: string;
+export declare const REGISTRATION_PUBLIC_KEY: Buffer;
+export declare const USERNAME_QUERY_IDS: Record<'CHECK'|'CHECK_MULTI'|'SET'|'GET'|'GET_RECOMMENDATIONS'|'PIN_SET', string>;
+export declare const USERNAME_CHECK_RESULT: { SUCCESS: 'SUCCESS'; INVALID: 'INVALID' };
+export declare const USERNAME_SOURCE: { FB: 'FB'; IG: 'IG'; USER_INPUT: 'USER_INPUT'; SUGGESTION: 'SUGGESTION' };

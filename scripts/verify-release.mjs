@@ -378,6 +378,89 @@ await check('media placeholder host', async () => {
 	}
 })
 
+
+// ── 13. username / reporting / registration port ─────────────────────────────
+await check('username surface', async () => {
+	const { makeUsernameSocket } = await import(join(pkgRoot, 'lib/Socket/username.js'))
+	assert(typeof makeUsernameSocket === 'function', 'makeUsernameSocket missing')
+	const { USERNAME_QUERY_IDS, USERNAME_SOURCE } = B
+	assert(Object.keys(USERNAME_QUERY_IDS).length === 6, `expected 6 username query ids, got ${Object.keys(USERNAME_QUERY_IDS).length}`)
+	assert(USERNAME_SOURCE.USER_INPUT === 'USER_INPUT', 'username source constants wrong')
+	const { USyncUser } = await import(join(pkgRoot, 'lib/WAUSync/index.js'))
+	const u = new USyncUser().withUsername('skyler').withUsernameKey('1234')
+	assert(u.username === 'skyler', 'USyncUser.withUsername did not set a username')
+	return `query ids=${Object.keys(USERNAME_QUERY_IDS).length}`
+})
+
+await check('reporting info store', async () => {
+	const { createReportingInfoStore } = await import(join(pkgRoot, 'lib/Store/reporting-info-store.js'))
+	const store = createReportingInfoStore()
+	store.add('111@s.whatsapp.net', { stanzaId: 'A1', timestamp: 10, reportingTag: Buffer.from('aa', 'hex') })
+	store.add('111@s.whatsapp.net', { stanzaId: 'A2', timestamp: 20, reportingTag: Buffer.from('bb', 'hex') })
+	store.add('111@s.whatsapp.net', { stanzaId: 'A2', timestamp: 25, reportingTag: Buffer.from('cc', 'hex') })
+	store.add('111@s.whatsapp.net', { stanzaId: 'A3', timestamp: 30 })
+	const list = store.getForJid('111@s.whatsapp.net')
+	assert(list.length === 2, `expected 2 entries (dedupe+skip), got ${list.length}`)
+	assert(list[0].stanzaId === 'A2', 'entries are not newest-first')
+	assert(store.size() === 2, 'size accounting wrong')
+	store.clear('111@s.whatsapp.net')
+	assert(store.getForJid('111@s.whatsapp.net').length === 0, 'clear did not empty the jid')
+	return 'dedupe, ordering and tagless drop all correct'
+})
+
+await check('reporting tag capture + spam IQ', async () => {
+	const { extractReportingInfoFromStanza, buildSpamReportIq, parseSpamReportResponse, SPAM_FLOWS } =
+		await import(join(pkgRoot, 'lib/Utils/spam-report-utils.js'))
+	const stanza = {
+		tag: 'message',
+		attrs: { id: 'STANZA1', t: '1700000000' },
+		content: [
+			{ tag: 'reporting', attrs: { validation_policy: 'strict' }, content: [
+				{ tag: 'reporting_validation', attrs: {}, content: [
+					{ tag: 'reporting_tag', attrs: { id: 'MSG1', ts_s: '1700000000' }, content: new Uint8Array([1, 2, 3]) }
+				] }
+			] }
+		]
+	}
+	const info = extractReportingInfoFromStanza(stanza)
+	assert(info?.stanzaId === 'MSG1', 'reporting tag not extracted')
+	assert(info.reportingTag.length === 3, 'reporting tag bytes wrong')
+	assert(info.validationPolicy === 'strict', 'validation policy not read')
+	const iq = buildSpamReportIq('222@lid', [{ stanzaId: 'MSG1', timestamp: 1700000000, reportingTag: info.reportingTag }], SPAM_FLOWS.ACCOUNT_INFO_REPORT)
+	const list = iq.content[0]
+	assert(iq.attrs.xmlns === 'spam' && list.tag === 'spam_list', 'spam IQ envelope wrong')
+	assert(list.content[0].content[1].content[0].content[0].tag === 'reporting_tag', 'reporting_tag missing from IQ')
+	const ok = parseSpamReportResponse({ tag: 'iq', attrs: { type: 'result' }, content: [] })
+	assert(ok.success === true, 'successful result not parsed')
+	const bad = parseSpamReportResponse({ tag: 'iq', attrs: { type: 'error' }, content: [{ tag: 'error', attrs: { code: '400' } }] })
+	assert(bad.success === false && bad.error.includes('400'), 'error result not parsed')
+	return `bytes=${iq.content[0].content.length} message node(s)`
+})
+
+await check('registration params + encrypt', async () => {
+	const { registrationParams, mobileRegisterEncrypt } = await import(join(pkgRoot, 'lib/Socket/registration.js'))
+	const params = registrationParams({
+		registrationId: 1234,
+		phoneNumberCountryCode: '+233',
+		phoneNumberNationalNumber: '24 000-0000',
+		noiseKey: { public: new Uint8Array(32).fill(1) },
+		signedIdentityKey: { public: new Uint8Array(32).fill(2) },
+		signedPreKey: { keyId: 7, keyPair: { public: new Uint8Array(32).fill(3) }, signature: new Uint8Array(64).fill(4) },
+		identityId: new Uint8Array([9, 9]),
+		backupToken: new Uint8Array([8]),
+		phoneId: 'phone-id',
+		deviceId: 12,
+		captcha: 'cap'
+	})
+	assert(params.cc === '233', `country code not normalised: ${params.cc}`)
+	assert(params.in === '240000000', `national number not normalised: ${params.in}`)
+	assert(/^[0-9a-f]{32}$/.test(params.token), 'mobile token is not an md5 hex digest')
+	assert(params.e_regid && params.e_skey_id, 'encoded key ids missing')
+	const sealed = mobileRegisterEncrypt('hello')
+	assert(Buffer.from(sealed, 'base64url').length > 33, 'sealed registration payload too short')
+	return `cc=${params.cc} in=${params.in}`
+})
+
 // ── report ────────────────────────────────────────────────────────────────────
 const failed = results.filter((r) => r.status === 'FAIL')
 
