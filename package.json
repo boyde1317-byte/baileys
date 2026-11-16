@@ -1,6 +1,6 @@
 {
   "name": "baileys",
-  "version": "0.3.18-r21",
+  "version": "0.3.18-r22",
   "description": "Enhanced Baileys v7 with a rich message layer: native-flow buttons, AI rich responses, a full A2UI v0.9 catalog (including form inputs) sent as self-hosted widgets, and VoIP.",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
