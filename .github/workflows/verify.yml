@@ -1,0 +1,31 @@
+name: Verify
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  verify:
+    name: node ${{ matrix.node }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [20, 22, 24]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+
+      - name: Install
+        # Optional peers (sharp, jimp, better-sqlite3, wrtc, mathjax) are skipped:
+        # they are only needed by callers that use those features.
+        run: npm install --omit=optional --no-audit --no-fund
+
+      - name: Verify rich layer offline
+        run: npm test

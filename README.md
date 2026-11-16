@@ -356,8 +356,8 @@ It covers the protocol version, the export surface, `nativeFlow` (`cta_url`, `ct
 `cta_call`), the `galaxyBar` envelope (`limited_time_offer` + `bottom_sheet` must be present or
 the bar renders nothing), A2UI surfaces (exactly one root, every child resolves), the
 `botForwardedMessage` + base64 `unifiedResponse` rich response, and the media-host fallback for
-`a.whatsapp.net` placeholder URLs. No network and no WhatsApp session, so it is safe to run
-before every release and in CI.
+`a.whatsapp.net` placeholder URLs. No network and no WhatsApp session, so it runs before every
+release and in CI — see `.github/workflows/verify.yml` (node 20/22/24).
 
 ## Module format and credits
 
