@@ -1,4 +1,30 @@
-# v0.3.18-r4 Device Test Checklist
+# Device test checklist
+
+Two layers of testing, in this order:
+
+1. **Automated, offline** — `npm test`. It proves the wire shapes encode and carry the fields
+   the client needs, but it cannot prove a device renders them.
+2. **Manual, on a real device** — the checklist below. Run it before calling a release proven.
+
+## Automated checks (`npm test`)
+
+| Check | Proves |
+| --- | --- |
+| protocol version | the advertised WA Web version is present and past the upstream base |
+| rich layer exports | no export was dropped while editing `lib/` |
+| nativeFlow `cta_url` / `cta_copy` / `cta_call` | button sugar still maps to the right CTA names and params |
+| galaxyBar envelope | `messageParamsJson` still carries `limited_time_offer` + `bottom_sheet`; without them the bar renders nothing |
+| A2UI surface | exactly one root component, every `child`/`children` entry resolves |
+| rich response table | still wrapped in `botForwardedMessage` with a base64 `unifiedResponse.data` |
+| media placeholder host | `a.whatsapp.net` URLs download from `mmg.whatsapp.net`, real CDN hosts are kept |
+| a2ui catalog components | every v0.9 basic catalog builder produces a node the validator accepts, in one surface |
+| a2ui validation catches gaps | a missing required prop and an unknown component are reported, and `false` is a legal value |
+| a2ui namespace parity | the `A2UI` namespace exposes every builder |
+
+Add a row here whenever a new wire shape is locked down, and a matching check to
+`scripts/verify-release.mjs`.
+
+---
 
 Run these on a **real device** before calling r4 proven. Order matters — test in this priority.
 

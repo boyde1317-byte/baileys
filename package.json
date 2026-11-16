@@ -1,12 +1,14 @@
 {
   "name": "baileys",
-  "version": "0.3.18-r18",
-  "description": "Enhanced Baileys v7 with a rich message layer: native-flow buttons, AI rich responses, and self-hosted A2UI surfaces sent through InteractiveMessage.bloksWidget.",
+  "version": "0.3.18-r21",
+  "description": "Enhanced Baileys v7 with a rich message layer: native-flow buttons, AI rich responses, a full A2UI v0.9 catalog (including form inputs) sent as self-hosted widgets, and VoIP.",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
   "type": "module",
   "scripts": {
-    "preinstall": "node ./engine-requirements.js"
+    "preinstall": "node ./engine-requirements.js",
+    "verify": "node scripts/verify-release.mjs",
+    "test": "node scripts/verify-release.mjs"
   },
   "engines": {
     "node": ">=20.0.0"
@@ -38,18 +40,18 @@
   "license": "MIT",
   "dependencies": {
     "@adiwajshing/keyed-db": "^0.2.4",
-    "@cacheable/node-cache": "^1.4.0",
-    "@hapi/boom": "^9.1.3",
+    "@cacheable/node-cache": "^3.1.1",
+    "@hapi/boom": "^10.0.1",
     "async-mutex": "^0.5.0",
-    "fflate": "^0.8.2",
+    "fflate": "^0.8.3",
     "libsignal": "^6.0.0",
-    "lru-cache": "^11.2.6",
-    "music-metadata": "^11.12.3",
-    "p-queue": "^9.1.0",
-    "pino": "^9.6.0",
-    "protobufjs": "^7.5.6",
+    "lru-cache": "^11.5.3",
+    "music-metadata": "^12.5.0",
+    "p-queue": "^10.0.0",
+    "pino": "^10.4.0",
+    "protobufjs": "^8.8.1",
     "whatsapp-rust-bridge": "0.5.5",
-    "ws": "^8.19.0"
+    "ws": "^8.23.0"
   },
   "peerDependencies": {
     "@napi-rs/image": "~1.12.0",

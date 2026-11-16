@@ -4,12 +4,12 @@ Baileys 0.3.18 (multi-device WhatsApp Web) plus a rich message layer: interactiv
 native-flow buttons, AI rich responses, and self-hosted A2UI surfaces that render natively
 in WhatsApp without a Meta Flow behind them.
 
-**Version:** `0.3.18-r18` · **Module:** ESM only, Node >= 20 · **License:** MIT
+**Version:** `0.3.18-r21` · **Module:** ESM only, Node >= 20 · **License:** MIT
 
 Install from GitHub (pin a tag, not `main`):
 
 ```bash
-npm install github:boyde1317-byte/baileys#v0.3.18-r18
+npm install github:boyde1317-byte/baileys#v0.3.18-r21
 ```
 
 ```js
@@ -175,6 +175,52 @@ Options: `components` (required), `uuid`, `surfaceId`, `catalogId`, `version`, `
 as `nativeFlow`), `contextInfo`, `viewOnce`, `bloksWidget: false` (send the envelope without
 the widget, for A/B-ing), `experimentalCta`.
 
+The full v0.9 basic catalog is covered, including the input components that turn a surface
+into a form:
+
+| Component | Builder | Notes |
+| --- | --- | --- |
+| Column / Row | `a2uiColumn(id, children, { justify, align })` | layout, takes `spaceBetween` etc. |
+| List | `a2uiList(id, children, { direction, listStyle, align })` | `ordered` / `unordered` |
+| Card | `a2uiCard(id, child)` | one child, wrap layouts yourself |
+| Text | `a2uiText(id, value, variant)` | `h1`–`h5`, `caption`, `body` |
+| Icon | `a2uiIcon(id, name)` | catalog icon names, e.g. `calendarToday` |
+| Image | `a2uiImage(id, url, { variant, fit, description })` | |
+| Video | `a2uiVideo(id, url)` | |
+| AudioPlayer | `a2uiAudio(id, url, { description })` | |
+| Divider | `a2uiDivider(id, { axis })` | |
+| Tabs | `a2uiTabs(id, [{ title, child }])` | each tab body is a component id |
+| Modal | `a2uiModal(id, { trigger, content })` | `trigger` opens `content` |
+| Button | `a2uiButton(id, child, action, { variant })` | `child` is the label component |
+| Button (URL) | `a2uiUrlButton(id, child, url, { variant })` | sugar over `a2uiOpenUrl` |
+| TextField | `a2uiTextField(id, label, { variant, value, validationRegexp })` | |
+| CheckBox | `a2uiCheckBox(id, label, value)` | |
+| ChoicePicker | `a2uiChoicePicker(id, { options, value, variant, displayStyle })` | chips or checkboxes |
+| Slider | `a2uiSlider(id, { label, min, max, value })` | |
+| DateTimeInput | `a2uiDateTimeInput(id, { value, enableDate, enableTime, min, max })` | |
+
+Actions are plain `{ call, args }`: `a2uiAction('openUrl', { url })` or the `a2uiOpenUrl(url)`
+sugar. `A2UI.components` lists the catalog names, and anything outside them is rejected by
+`validateA2uiComponents` instead of silently dying on the device.
+
+```js
+import { a2uiColumn, a2uiText, a2uiTextField, a2uiSlider, a2uiCheckBox, a2uiChoicePicker,
+         a2uiDateTimeInput, a2uiButton, a2uiAction } from 'baileys';
+
+const components = [
+  a2uiColumn('root', ['title', 'name', 'guests', 'when', 'pick', 'agree', 'goText', 'go']),
+  a2uiText('title', 'Book a table', 'h3'),
+  a2uiTextField('name', 'Name'),
+  a2uiSlider('guests', { label: 'Guests', min: 1, max: 8, value: 2 }),
+  a2uiDateTimeInput('when', { value: '2026-11-20', enableDate: true }),
+  a2uiChoicePicker('pick', { label: 'Seating', options: ['Window', 'Patio'], value: ['Window'],
+                             variant: 'mutuallyExclusive', displayStyle: 'chips' }),
+  a2uiCheckBox('agree', 'I agree to the terms', false),
+  a2uiText('goText', 'Book now'),
+  a2uiButton('go', 'goText', a2uiAction('openUrl', { url: 'https://example.com/book' }), { variant: 'primary' })
+];
+```
+
 Three rules the device enforces:
 
 1. **Exactly one `root` component.** Validation walks down from it; a duplicate root makes
@@ -292,12 +338,37 @@ sock.ev.on('messages.upsert', async ({ messages, type }) => {
   skipping quietly, so a missing widget never masquerades as a render bug.
 - This repo ships compiled `lib/` only, no TypeScript source. Hand-edit the `.js` and the
   matching `.d.ts` together.
+- Media messages often carry `url` on `a.whatsapp.net`, which never resolves. Use their valid
+  `directPath`, which now goes to `mmg.whatsapp.net` on its own; a real CDN host on the `url`
+  is still honoured.
+
+## Verifying a build
+
+`npm test` (or `npm run verify`) runs `scripts/verify-release.mjs`: an offline suite that builds
+one message per rich path through the package's own content pipeline, protobuf-encodes it, and
+asserts the shape the device actually depends on.
+
+```bash
+npm install --omit=optional && npm test
+```
+
+It covers the protocol version, the export surface, `nativeFlow` (`cta_url`, `cta_copy`,
+`cta_call`), the `galaxyBar` envelope (`limited_time_offer` + `bottom_sheet` must be present or
+the bar renders nothing), A2UI surfaces (exactly one root, every child resolves), the
+`botForwardedMessage` + base64 `unifiedResponse` rich response, and the media-host fallback for
+`a.whatsapp.net` placeholder URLs. No network and no WhatsApp session, so it is safe to run
+before every release and in CI.
 
 ## Module format and credits
 
 ESM only (`"type": "module"`), Node >= 20. Peer dependencies (`sharp`/`jimp`, `link-preview-js`,
 `audio-decode`, `better-sqlite3`, `mathjax-node`) are optional and only needed by the features
 that use them.
+
+Upstream base: `@whiskeysockets/baileys` `7.0.0-rc14`, plus the post-rc14 media-host fix
+(`a.whatsapp.net` placeholder URLs must download from `mmg.whatsapp.net`). The advertised
+protocol version is `2.3000.1044479778`, ahead of rc14's `2.3000.1043857760`; WhatsApp's
+check-update reports it as neither below soft nor below hard minimum.
 
 Fork of [WhiskeySockets/Baileys](https://github.com/WhiskeySockets/Baileys). The rich message
 layer builds on work by Lia (elaiana), whose note in `lib/Utils/rich-message-utils.js` must be
