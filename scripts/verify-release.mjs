@@ -461,6 +461,59 @@ await check('registration params + encrypt', async () => {
 	return `cc=${params.cc} in=${params.in}`
 })
 
+// ── sound stickers ───────────────────────────────────────────────────────────
+await check('proto knows the sound-sticker fields', () => {
+	// StickerMessage.audioMessage (26) and Message.audioStickerMessage (134) are
+	// WhatsApp's sound-sticker pair. They are not in the published proto, so the
+	// static build carries them by hand — losing them silently turns every sound
+	// sticker into a plain sticker with no audio.
+	assert('audioMessage' in proto.Message.StickerMessage.prototype, 'StickerMessage.audioMessage (26) is missing from the proto')
+	assert('audioStickerMessage' in proto.Message.prototype, 'Message.audioStickerMessage (134) is missing from the proto')
+	return 'fields 26 and 134 declared'
+})
+
+await check('sound stickers survive encode, decode, fromObject and the archive', () => {
+	const audio = { url: 'https://mmg.invalid/a.ogg', mimetype: 'audio/ogg; codecs=opus', mediaKey: new Uint8Array(32).fill(7), directPath: '/v/a.enc', seconds: 5 }
+	const sticker = { url: 'https://mmg.invalid/s.webp', mimetype: 'image/webp', isAnimated: true, audioMessage: audio }
+	const built = proto.Message.create({ audioStickerMessage: { message: { stickerMessage: sticker } } })
+	const wire = proto.Message.encode(built).finish()
+	const back = proto.Message.decode(wire)
+	const got = back.audioStickerMessage?.message?.stickerMessage?.audioMessage
+	assert(got?.url === audio.url, 'field 134/26 dropped on decode')
+	assert(got?.mimetype === audio.mimetype, 'audio mimetype lost')
+	assert(Buffer.compare(Buffer.from(wire), Buffer.from(proto.Message.encode(back).finish())) === 0, 're-encode is not byte-identical')
+
+	// generateWAMessage / crmStore both go through fromObject, which used to drop
+	// an unknown key — the archive then stored a sound sticker with no sound.
+	const fromPlain = proto.Message.fromObject({ audioStickerMessage: { message: { stickerMessage: sticker } } })
+	assert(fromPlain.audioStickerMessage?.message?.stickerMessage?.audioMessage?.url === audio.url, 'fromObject dropped the audio')
+
+	const archived = proto.WebMessageInfo.decode(proto.WebMessageInfo.encode({
+		key: { remoteJid: '1203630@g.us', fromMe: false, id: 'ARCHIVE1' },
+		messageTimestamp: 1700000000,
+		message: built
+	}).finish())
+	assert(archived.message.audioStickerMessage?.message?.stickerMessage?.audioMessage?.url === audio.url, 'archive round-trip lost the audio')
+
+	// A bare stickerMessage carrying the track on its own.
+	const bare = proto.Message.decode(proto.Message.encode({ stickerMessage: sticker }).finish())
+	assert(bare.stickerMessage.audioMessage?.url === audio.url, 'field 26 dropped from a bare stickerMessage')
+
+	assert(getContentType(back) === 'audioStickerMessage', `getContentType returned ${getContentType(back)}`)
+	return 'create/encode/decode/fromObject/archive all keep it'
+})
+
+await check('ordinary messages are untouched by the new fields', () => {
+	const text = proto.Message.decode(proto.Message.encode({ conversation: 'hi' }).finish())
+	assert(text.conversation === 'hi', 'plain text decode broke')
+	assert(Object.keys(text).join() === 'conversation', `phantom fields on a text message: ${Object.keys(text)}`)
+	const image = proto.Message.decode(proto.Message.encode({ imageMessage: { url: 'u' } }).finish())
+	assert(Object.keys(image).join() === 'imageMessage', `phantom fields on an image: ${Object.keys(image)}`)
+	const spoiler = proto.Message.decode(proto.Message.encode({ spoilerMessage: { message: { conversation: 'x' } } }).finish())
+	assert(spoiler.spoilerMessage?.message?.conversation === 'x', 'another FutureProofMessage field broke')
+	return 'no phantom 134/26'
+})
+
 // ── report ────────────────────────────────────────────────────────────────────
 const failed = results.filter((r) => r.status === 'FAIL')
 
